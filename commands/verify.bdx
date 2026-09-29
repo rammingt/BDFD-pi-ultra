@@ -80,34 +80,45 @@ $attachFile[verify_$message[1].json;$jsonPretty]
 ---
 @name verifyreport
 @type snippet
-$c[The report. Used by !check and the join check, after a $httpGet to the Verify API. Built with a container, which Discord shows as one card with a colored edge.]
-$addContainer[report;$httpResult[bdfd;color]]
-$addSection[## \[$httpResult[bdfd;title]\]($httpResult[bdfd;profile])
-$httpResult[bdfd;description];$httpResult[bdfd;headshot]]
+$c[The report, one card per check. Used by !check and the join check, after a $httpGet to the Verify API. The card text comes ready made from Verify, under bdfd.cards. A card gets a red edge when its check flagged the user.]
+$addContainer[profile;$httpResult[bdfd;color]]
+$addSection[$httpResult[bdfd;cards;profile];$httpResult[bdfd;headshot]]
 $addSeparator
-$addTextDisplay[**Result:** $httpResult[bdfd;status]
-**Roblox ID:** `$httpResult[bdfd;roblox_id]`
-**Discord:** <@$httpResult[discord_id]>
-**Account age:** $httpResult[bdfd;age]
-**Friends:** $httpResult[bdfd;social]
-**Inventory:** $httpResult[bdfd;inventory]]
+$addTextDisplay[$httpResult[bdfd;cards;result]]
+
+$addContainer[rovuew;$httpResult[bdfd;cards;rovuew_color]]
+$addTextDisplay[## RoVuew flags]
 $addSeparator
-$addTextDisplay[### RoVuew
-$httpResult[bdfd;rovuew]]
-$addTextDisplay[### Background checks
-$httpResult[bdfd;background]]
-$addTextDisplay[### Notes
-$httpResult[bdfd;reasons]]
-$if[$httpResult[bdfd;appeal]!=]
-$addTextDisplay[**Server Sweep appeal:** $httpResult[bdfd;appeal]]
+$addTextDisplay[$httpResult[bdfd;cards;rovuew]]
+
+$addContainer[tase;$httpResult[bdfd;cards;tase_color]]
+$addTextDisplay[## TASE flags]
+$addSeparator
+$addTextDisplay[$httpResult[bdfd;cards;tase]]
+
+$if[$httpResult[bdfd;cards;show_serversweep]==yes]
+$addContainer[serversweep;$httpResult[bdfd;cards;serversweep_color]]
+$addTextDisplay[## Server Sweep flags]
+$addSeparator
+$addTextDisplay[$httpResult[bdfd;cards;serversweep]]
 $endif
+
+$if[$httpResult[bdfd;cards;show_xtracker]==yes]
+$addContainer[xtracker;$httpResult[bdfd;cards;xtracker_color]]
+$addTextDisplay[## XTracker]
 $addSeparator
-$addTextDisplay[### Wearing ($httpResult[bdfd;wearing_count])
-$httpResult[bdfd;wearing]]
+$addTextDisplay[$httpResult[bdfd;cards;xtracker]]
+$endif
+
+$addContainer[wearing]
+$addTextDisplay[## Wearing ($httpResult[bdfd;wearing_count])]
+$addSeparator
+$addTextDisplay[$httpResult[bdfd;cards;wearing]]
 $if[$httpResult[bdfd;avatar]!=]
 $addMediaGallery[$httpResult[bdfd;avatar]]
 $endif
-$addSeparator[no]
+$addTextDisplay[-# Checked <t:$getTimestamp:R>]
+
+$closeContainer
 $addButton[no;verifyraw:$httpResult[discord_id];Full results;secondary]
 $addButton[no;$httpResult[bdfd;profile];Roblox profile;link]
-$addTextDisplay[-# Checked <t:$getTimestamp:R>]
