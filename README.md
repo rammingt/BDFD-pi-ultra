@@ -38,7 +38,7 @@ Several commands per file? Separate them with a `---` line.
 | Directive | Meaning |
 |---|---|
 | `@name ping` | Command name (default: file name) |
-| `@type prefix` | `prefix`, `slash`, `both`, `button`, `join`, `leave`, `ready`, `always` (every message), `interval` |
+| `@type prefix` | `prefix`, `slash`, `both`, `button`, `join`, `leave`, `ready`, `always` (every message), `interval`, `snippet` (shared code for `$include`) |
 | `@aliases a, b` | Extra triggers |
 | `@description ...` | Slash command description |
 | `@option name:type:description:required` | Slash option (`string`, `integer`, `number`, `boolean`, `user`, `channel`, `role`) — read it with `$message[name]` |
@@ -87,19 +87,25 @@ npm test
 - **Embeds:** `$title $description $color $footer $author $addField $thumbnail $image $addTimestamp`
 - **Response:** `$reply $ephemeral $deleteCommand $dm $useChannel $allowMention $addReactions $addButton $sendMessage $channelSendMessage`
 - **Moderation:** `$ban $unban $kick $timeout $giveRole $takeRole $clear`
-- **JSON/web:** `$jsonParse $json $jsonSet $jsonStringify $httpAddHeader $httpGet $httpStatus $httpResult`
+- **JSON/web:** `$jsonParse $json $jsonPretty $jsonSet $jsonStringify $httpAddHeader $httpGet $httpStatus $httpResult`
+- **Files:** `$attachFile[name;content]` sends text as a file with the reply (up to 10)
+- **Reuse:** `$include[name]` runs a `@type snippet` command in place, sharing variables, the HTTP result and the embed
 - **Settings:** `$env[BDX_NAME]` reads a value from `.env`. Only names starting with `BDX_` work, so a command can't print your bot token.
 
 In cooldown error messages, `%time%` is replaced with the time left. Use `\;`, `\]`, `\[`, `\$` to write those characters literally.
 
 ## Roblox verification (Verify)
 
-`commands/verify.bdx` has two commands that use the Verify API running on the same Pi:
+`commands/verify.bdx` uses the Verify API running on the same Pi:
 
-| Command | Who | What it does |
+| Part | Who | What it does |
 |---|---|---|
-| `!verify` | Everyone | Checks their own account and gives the verified role if they pass |
+| `!verify` | Everyone | Checks their own account, gives the verified role if they pass, and logs the result for staff |
 | `!check @user` | Staff with Manage Roles | Full report with avatar, account age, RoVuew, background checks and worn items |
+| Join check | Automatic | Checks everyone who joins, posts the report in the log channel, and gives the role if they pass |
+| Full results button | Staff with Manage Roles | Under every report. Sends RoVuew's whole reply and Verify's whole reply as `.json` files, only to whoever pressed it |
+
+The report embed lives in one snippet (`verifyreport`), so `!check` and the join check always look the same.
 
 Add these to `.env` and restart with `sudo systemctl restart bdx`:
 
@@ -107,9 +113,12 @@ Add these to `.env` and restart with `sudo systemctl restart bdx`:
 BDX_VERIFY_URL=http://localhost:8080
 BDX_VERIFY_KEY=the API_KEY from ~/Verify/.env
 BDX_VERIFIED_ROLE_ID=the role to give
+BDX_VERIFY_LOG_CHANNEL=the staff channel for reports
 ```
 
-The bot's role has to sit above the verified role in your server settings, or Discord won't let it give the role. Because both run on the Pi, BDX talks to Verify directly and nothing has to be public.
+The bot's role has to sit above the verified role in your server settings, or Discord won't let it give the role. The join check needs the **Server Members** intent, which BDX already asks for. Because both run on the Pi, BDX talks to Verify directly and nothing has to be public.
+
+Buttons and slash commands that take longer than 2 seconds are deferred automatically, so a slow check doesn't fail with "This interaction failed".
 
 ## Differences from BDFD
 - Mentions are **off by default** in replies (safer); use `$allowMention` to ping.

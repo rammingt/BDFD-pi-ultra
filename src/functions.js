@@ -316,6 +316,22 @@ const F = {
 
   // ───────────── response behaviour ─────────────
   reply: { fn(ctx) { ctx.out.reply = true; return ''; } },
+  attachFile: { fn(ctx, a) {
+    const [name, content] = need(a, 2, '$attachFile[file name;content]');
+    if (ctx.out.files.length >= 10) fail('a message can carry at most 10 files');
+    ctx.out.files.push({ name: name.trim() || 'file.txt', content });
+    return '';
+  } },
+  // Runs a "@type snippet" command in place, sharing this command's variables,
+  // HTTP result and embed. Handy for code two commands both need.
+  include: { async fn(ctx, a) {
+    const name = need(a, 1, '$include[snippet name]')[0].trim().toLowerCase();
+    const snip = ctx.engine.ofType('snippet').find((c) => c.name.toLowerCase() === name);
+    if (!snip) fail(`no snippet called "${name}"`);
+    if (ctx.includeDepth >= 10) fail('snippets include each other too deep');
+    ctx.includeDepth++;
+    try { return await ctx.engine.interpreter.evalNodes(snip.ast, ctx); } finally { ctx.includeDepth--; }
+  } },
   ephemeral: { fn(ctx) { ctx.out.ephemeral = true; return ''; } },
   deleteCommand: { fn(ctx) { ctx.out.deleteCommand = true; return ''; } },
   dm: { fn(ctx, a) { ctx.out.dm = arg(a, 0, ctx.author.id); return ''; } },
@@ -397,6 +413,11 @@ const F = {
     o[a[a.length - 2]] = a[a.length - 1]; return '';
   } },
   jsonStringify: { fn: (ctx) => JSON.stringify(ctx.json ?? null) },
+  jsonPretty: { fn(ctx, a) {
+    let v = ctx.json;
+    for (const k of a || []) v = v == null ? undefined : v[k];
+    return v === undefined ? '' : JSON.stringify(v, null, 2);
+  } },
   httpAddHeader: { fn(ctx, a) {
     need(a, 2, '$httpAddHeader[name;value]');
     (ctx.httpHeaders ??= {})[a[0]] = a[1];

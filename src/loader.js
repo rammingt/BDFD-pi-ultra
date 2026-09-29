@@ -3,7 +3,7 @@
 // line containing only "---". Each command starts with optional @directives:
 //
 //   @name ping                (default: file name)
-//   @type prefix              prefix | slash | both | button | join | leave | ready | always
+//   @type prefix              prefix | slash | both | button | join | leave | ready | always | snippet
 //   @aliases p, pong
 //   @description Check the bot latency
 //   @option user:user:Who to check:required     (slash options: name:type:description[:required])
@@ -13,7 +13,7 @@ const fs = require('fs');
 const path = require('path');
 const { parse } = require('./parser');
 
-const TYPES = new Set(['prefix', 'slash', 'both', 'button', 'join', 'leave', 'ready', 'always', 'interval']);
+const TYPES = new Set(['prefix', 'slash', 'both', 'button', 'join', 'leave', 'ready', 'always', 'interval', 'snippet']);
 
 function parseCommandFile(text, file, registry) {
   const chunks = text.replace(/\r\n/g, '\n').split(/^---\s*$/m);

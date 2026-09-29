@@ -115,3 +115,24 @@ test('$httpAddHeader, $httpStatus and $env', async () => {
     server.close();
   }
 });
+
+test('$attachFile, $jsonPretty and $include', async () => {
+  const r = await run('$jsonParse[{"a":{"b":1}}]$attachFile[a.json;$jsonPretty[a]]done');
+  assert.equal(r.content, 'done');
+  assert.deepEqual(r.files, [{ name: 'a.json', content: '{\n  "b": 1\n}' }]);
+  assert.equal((await run('$jsonParse[{"a":1}]$jsonPretty[missing]')).content, '');
+
+  const { loadDir } = require('../src/loader');
+  const e = new Engine({ dataFile: null });
+  const fs = require('fs');
+  const os = require('os');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'bdx-'));
+  fs.writeFileSync(path.join(dir, 'x.bdx'), '@name card\n@type snippet\n$title[Hi $var[who]]\n---\n@name show\n$var[who;bob]$include[card]ok');
+  e.setCommands(loadDir(dir, e.registry).commands);
+  const out = await e.execute(e.match('!show').cmd, { author, args: [] });
+  assert.equal(out.content, 'ok');
+  assert.equal(out.embeds[0].title, 'Hi bob');
+  assert.equal(e.match('!card'), null); // snippets can't be run as commands
+  assert.match((await e.execute(e.match('!show').cmd, { author, args: [] })).content, /ok/);
+  fs.rmSync(dir, { recursive: true });
+});

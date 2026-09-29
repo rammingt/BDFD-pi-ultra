@@ -33,6 +33,7 @@ function show(r) {
   if (r.content) console.log(r.content);
   for (const e of r.embeds) console.log('[embed]', JSON.stringify(e, null, 2));
   for (const row of r.components) console.log('[buttons]', row.components.map((b) => `[${b.label}]`).join(' '));
+  for (const f of r.files || []) console.log(`[file] ${f.name} (${Buffer.byteLength(f.content)} bytes)`);
   const flags = ['reply', 'ephemeral', 'deleteCommand'].filter((f) => r[f]);
   console.log(`\x1b[2m(${r.ms}ms${flags.length ? ', ' + flags.join(', ') : ''})\x1b[0m`);
 }

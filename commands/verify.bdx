@@ -1,32 +1,85 @@
 @name verify
 @description Verify your Roblox account
 $reply
+$if[$env[BDX_VERIFIED_ROLE_ID]!=]
+$onlyIf[$hasRole[$authorID;$env[BDX_VERIFIED_ROLE_ID]]==false;You're already verified.]
+$endif
 $cooldown[30s;Please wait %time% before trying again.]
 $httpAddHeader[Authorization;Bearer $env[BDX_VERIFY_KEY]]
 $httpGet[$env[BDX_VERIFY_URL]/check/$authorID]
 $onlyIf[$httpStatus!=404;Your Discord isn't linked to a Roblox account yet. Verify with Bloxlink first, then run !verify again.]
 $onlyIf[$httpStatus==200;I couldn't check your account right now. Try again in a minute.]
 $if[$httpResult[status]==pass]
+$if[$env[BDX_VERIFIED_ROLE_ID]!=]
 $giveRole[$authorID;$env[BDX_VERIFIED_ROLE_ID]]
-You're verified, $username! Welcome in.
+$endif
+You're verified, **$httpResult[bdfd;username]**! Welcome in.
 $elseif[$httpResult[status]==review]
-Thanks, $username. A staff member needs to look at your account before you get access.
+Thanks, **$httpResult[bdfd;username]**. A staff member needs to look at your account before you get access.
 $else
-Sorry, you didn't pass verification.
+Sorry, **$httpResult[bdfd;username]** didn't pass verification.
 $endif
 $if[$httpResult[bdfd;appeal]!=]
 If you think Server Sweep got it wrong, you can appeal here: $httpResult[bdfd;appeal]
 $endif
+$if[$env[BDX_VERIFY_LOG_CHANNEL]!=]
+$channelSendMessage[$env[BDX_VERIFY_LOG_CHANNEL];<@$authorID> ran !verify as **$httpResult[bdfd;username]**: $httpResult[bdfd;status]. Use `!check <@$authorID>` for the full report.]
+$endif
 ---
 @name check
+@aliases bgcheck, rcheck
 @description Full Roblox background check on a member
 $reply
 $onlyPerms[manageroles;You need the Manage Roles permission to use this.]
 $argsCheck[>1;Use it like this: !check @user]
+$var[target;$findUser[$message]]
+$onlyIf[$var[target]!=;I couldn't find that user.]
 $httpAddHeader[Authorization;Bearer $env[BDX_VERIFY_KEY]]
-$httpGet[$env[BDX_VERIFY_URL]/check/$findUser[$message]]
-$onlyIf[$httpStatus!=404;That user isn't linked with Bloxlink, or isn't in the server.]
+$httpGet[$env[BDX_VERIFY_URL]/check/$var[target]]
+$onlyIf[$httpStatus!=404;<@$var[target]> isn't linked with Bloxlink, or isn't in the server.]
 $onlyIf[$httpStatus==200;The check didn't go through (error $httpStatus). Try again in a minute.]
+$include[verifyreport]
+---
+@name verifyjoin
+@type join
+$c[Checks everyone who joins and posts the report for staff. Gives the role right away if they pass.]
+$onlyIf[$isBot==false;]
+$if[$env[BDX_VERIFY_LOG_CHANNEL]!=]
+$useChannel[$env[BDX_VERIFY_LOG_CHANNEL]]
+$endif
+$httpAddHeader[Authorization;Bearer $env[BDX_VERIFY_KEY]]
+$httpGet[$env[BDX_VERIFY_URL]/check/$authorID]
+$onlyIf[$httpStatus!=404;<@$authorID> joined. They aren't linked with Bloxlink yet, so nothing was checked.]
+$onlyIf[$httpStatus==200;<@$authorID> joined, but the check didn't go through (error $httpStatus). Run `!check <@$authorID>` in a minute.]
+$if[$httpResult[status]==pass]
+$if[$env[BDX_VERIFIED_ROLE_ID]!=]
+$giveRole[$authorID;$env[BDX_VERIFIED_ROLE_ID]]
+$endif
+<@$authorID> joined and passed, so they got the verified role.
+$else
+<@$authorID> joined. Take a look before letting them in.
+$endif
+$include[verifyreport]
+---
+@name verifyraw
+@type button
+$c[The "Full results" button under a report. Sends both whole replies as files, only to the staff member who pressed it.]
+$ephemeral
+$onlyPerms[manageroles;Only staff can see the full results.]
+$httpAddHeader[Authorization;Bearer $env[BDX_VERIFY_KEY]]
+$httpGet[$env[BDX_VERIFY_URL]/check/$message[1]?full=true]
+$onlyIf[$httpStatus==200;Couldn't load the full results (error $httpStatus).]
+Full results for <@$message[1]> (**$httpResult[bdfd;username]**).
+$if[$httpResult[rovuew;ok]==true]
+$attachFile[rovuew_$message[1].json;$jsonPretty[rovuew;raw]]
+$else
+RoVuew didn't answer on this check, so there's no RoVuew file.
+$endif
+$attachFile[verify_$message[1].json;$jsonPretty]
+---
+@name verifyreport
+@type snippet
+$c[The report embed. Used by !check and the join check, after a $httpGet to the Verify API.]
 $title[$httpResult[bdfd;title];$httpResult[bdfd;profile]]
 $description[$httpResult[bdfd;description]]
 $color[$httpResult[bdfd;color]]
@@ -37,7 +90,7 @@ $if[$httpResult[bdfd;avatar]!=]
 $image[$httpResult[bdfd;avatar]]
 $endif
 $addField[Result;**$httpResult[bdfd;status]**;yes]
-$addField[Roblox ID;$httpResult[bdfd;roblox_id];yes]
+$addField[Roblox ID;`$httpResult[bdfd;roblox_id]`;yes]
 $addField[Discord;<@$httpResult[discord_id]>;yes]
 $addField[Account age;$httpResult[bdfd;age];yes]
 $addField[Friends;$httpResult[bdfd;social];yes]
@@ -51,3 +104,5 @@ $addField[Server Sweep appeal;$httpResult[bdfd;appeal];no]
 $endif
 $footer[Verify]
 $addTimestamp
+$addButton[no;verifyraw:$httpResult[discord_id];Full results;secondary]
+$addButton[no;$httpResult[bdfd;profile];Roblox profile;link]

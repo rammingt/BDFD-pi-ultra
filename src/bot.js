@@ -1,7 +1,7 @@
 'use strict';
 // Discord glue: turns gateway events into Engine.execute() calls.
 const fs = require('fs');
-const { Client, GatewayIntentBits, Partials, ApplicationCommandOptionType, Events } = require('discord.js');
+const { Client, GatewayIntentBits, Partials, ApplicationCommandOptionType, Events, AttachmentBuilder } = require('discord.js');
 const { Engine } = require('./engine');
 const { parseDuration } = require('./functions');
 
@@ -42,10 +42,17 @@ async function startBot({ token, commandsDir, dataFile, prefix, watch = true }) 
   });
 
   const payloadOf = (r) => {
-    if (!r.content && !r.embeds.length) return null;
+    if (!r.content && !r.embeds.length && !r.files?.length) return null;
     return { content: r.content ? r.content.slice(0, 2000) : undefined, embeds: r.embeds, components: r.components,
+      files: (r.files || []).map((f) => new AttachmentBuilder(Buffer.from(f.content, 'utf8'), { name: f.name })),
       allowedMentions: r.allowMentions ? undefined : { parse: [] } };
   };
+
+  // Does this command's code call $name anywhere (including inside $if branches)?
+  const uses = (nodes, name) => (nodes || []).some((n) => (n.name === name)
+    || (n.args || []).some((a) => uses(a, name))
+    || (n.branches || []).some((b) => uses(b.cond, name) || uses(b.body, name))
+    || uses(n.else, name));
 
   // Send a result in reply to a message (or to a channel for events).
   async function deliver(r, { message, channel }) {
@@ -100,8 +107,19 @@ async function startBot({ token, commandsDir, dataFile, prefix, watch = true }) 
       extra = { customId: i.customId, args: i.customId.split(':').slice(1) };
     }
     if (!cmd) return;
-    const r = await engine.execute(cmd, { ...baseEnv(i.user, i.guild, i.channel, i.member), ...extra });
+    // Discord drops an interaction nobody answers within 3 seconds. If the command
+    // is still busy (an HTTP call, $wait) by then, tell Discord we're working on it.
+    let deferring = null;
+    const timer = setTimeout(() => {
+      deferring = i.deferReply({ ephemeral: uses(cmd.ast, 'ephemeral') }).then(() => true, () => false);
+    }, 2000);
+    const r = await engine.execute(cmd, { ...baseEnv(i.user, i.guild, i.channel, i.member), ...extra })
+      .finally(() => clearTimeout(timer));
     const payload = payloadOf(r);
+    if (deferring && await deferring) {
+      await i.editReply(payload || { content: '✅' });
+      return;
+    }
     if (!payload) { if (i.isButton()) await i.deferUpdate(); else await i.reply({ content: '✅', ephemeral: true }); return; }
     await i.reply({ ...payload, ephemeral: r.ephemeral || r.stopped });
   }));

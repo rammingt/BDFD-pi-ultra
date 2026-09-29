@@ -61,6 +61,8 @@ class Engine {
    */
   async execute(cmd, env) {
     const ctx = {
+      engine: this,
+      includeDepth: 0,
       steps: 0,
       maxSteps: this.maxSteps,
       errorMessage: undefined,
@@ -81,7 +83,7 @@ class Engine {
       customId: env.customId || '',
       discord: env.discord || null,
       send: env.send || (async () => ''),
-      out: { embeds: [], components: [], reactions: [], reply: false, ephemeral: false, deleteCommand: false, dm: false, channelId: null, allowMentions: false },
+      out: { embeds: [], components: [], reactions: [], files: [], reply: false, ephemeral: false, deleteCommand: false, dm: false, channelId: null, allowMentions: false },
     };
     let content;
     let stopped = false;
@@ -92,7 +94,7 @@ class Engine {
       content = e.userMessage;
       stopped = true;
       // a stopped command only shows its error message, not half-built embeds
-      ctx.out.embeds = []; ctx.out.components = []; ctx.out.reactions = [];
+      ctx.out.embeds = []; ctx.out.components = []; ctx.out.reactions = []; ctx.out.files = [];
     }
     const embeds = ctx.out.embeds.filter(Boolean).map((e) => (e.fields.length ? e : { ...e, fields: undefined }));
     return { ...ctx.out, embeds, content: content.trim(), stopped, ms: Date.now() - ctx.startedAt };
