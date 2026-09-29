@@ -63,12 +63,13 @@ $include[verifyreport]
 ---
 @name verifyraw
 @type button
-$c[The "Full results" button under a report. Sends both whole replies as files, only to the staff member who pressed it.]
+$c[The "Full results" button under a report. DMs both whole replies as files to the staff member who pressed it. Phones often can't open files in "only you can see this" replies, so they go to DMs.]
 $ephemeral
 $onlyPerms[manageroles;Only staff can see the full results.]
 $httpAddHeader[Authorization;Bearer $env[BDX_VERIFY_KEY]]
 $httpGet[$env[BDX_VERIFY_URL]/check/$message[1]?full=true]
 $onlyIf[$httpStatus==200;Couldn't load the full results (error $httpStatus).]
+$dm
 Full results for <@$message[1]> (**$httpResult[bdfd;username]**).
 $if[$httpResult[rovuew;ok]==true]
 $attachFile[rovuew_$message[1].json;$jsonPretty[rovuew;raw]]

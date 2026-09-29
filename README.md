@@ -126,7 +126,7 @@ In cooldown error messages, `%time%` is replaced with the time left. Use `\;`, `
 | `!verify` | Everyone | Checks their own account, gives the verified role if they pass, and logs the result for staff |
 | `!check @user` | Staff with Manage Roles | Full report with avatar, account age, RoVuew, background checks and worn items |
 | Join check | Automatic | Checks everyone who joins, posts the report in the log channel, and gives the role if they pass |
-| Full results button | Staff with Manage Roles | Under every report. Sends RoVuew's whole reply and Verify's whole reply as `.json` files, only to whoever pressed it |
+| Full results button | Staff with Manage Roles | Under every report. DMs RoVuew's whole reply and Verify's whole reply as `.json` files to whoever pressed it. If their DMs are closed, it shows them there instead |
 
 The report embed lives in one snippet (`verifyreport`), so `!check` and the join check always look the same.
 
@@ -144,6 +144,7 @@ The bot's role has to sit above the verified role in your server settings, or Di
 Buttons and slash commands that take longer than 2 seconds are deferred automatically, so a slow check doesn't fail with "This interaction failed".
 
 ## Differences from BDFD
+- `$dm` works in buttons and slash commands too: the reply goes to DMs and the channel gets a short "Sent to your DMs".
 - Mentions are **off by default** in replies (safer); use `$allowMention` to ping.
 - Error messages name the failing function; `$suppressErrors[msg]` replaces them.
 - A line that only has functions on it and prints nothing leaves no blank line in the message.

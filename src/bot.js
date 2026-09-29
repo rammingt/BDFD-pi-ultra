@@ -115,7 +115,19 @@ async function startBot({ token, commandsDir, dataFile, prefix, watch = true, be
     }, 2000);
     const r = await engine.execute(cmd, { ...baseEnv(i.user, i.guild, i.channel, i.member), ...extra })
       .finally(() => clearTimeout(timer));
-    const payload = payloadOf(r);
+    let payload = payloadOf(r);
+    // $dm: send the result to DMs and just confirm in the channel. Files show up
+    // reliably there, while phones often can't open files in "only you" replies.
+    if (r.dm && payload && !r.stopped) {
+      try {
+        const u = await client.users.fetch(String(r.dm).replace(/\D/g, ''));
+        await u.send(payload);
+        payload = { content: 'Sent to your DMs.' };
+      } catch {
+        payload = { ...payload, content: `${payload.content ? `${payload.content}\n` : ''}I couldn't DM you, so here it is instead. Turn on DMs from server members to get these in DMs.`.slice(0, 2000) };
+      }
+      r.ephemeral = true;
+    }
     if (deferring && await deferring) {
       await i.editReply(payload || { content: '✅' });
       return;
