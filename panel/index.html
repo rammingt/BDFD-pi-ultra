@@ -612,14 +612,16 @@ function renderButton(b) {
     : `<button class="dbtn s${b.style}" title="ID: ${esc(b.custom_id || b.id || '')}" disabled>${esc(b.label)}</button>`;
 }
 // Containers and the rest of Discord's newer message layout.
+let attachments = {};
+const mediaUrl = (u) => (u && u.startsWith('attachment://') ? attachments[u.slice(13)] || '' : u);
 function renderV2(list) {
   return (list || []).map((c) => {
     switch (c.type) {
       case 17: return `<div class="v2box${c.spoiler ? ' spoil' : ''}"${c.accent_color != null ? ` style="border-left:4px solid #${c.accent_color.toString(16).padStart(6, '0')}"` : ''}>${renderV2(c.components)}</div>`;
       case 10: return `<div class="txt">${md(c.content)}</div>`;
-      case 9: return `<div class="v2sec"><div>${renderV2(c.components)}</div>${c.accessory?.type === 11 ? `<img class="v2thumb" src="${esc(c.accessory.media.url)}" alt="">` : c.accessory?.type === 2 ? renderButton(c.accessory) : ''}</div>`;
+      case 9: return `<div class="v2sec"><div>${renderV2(c.components)}</div>${c.accessory?.type === 11 ? `<img class="v2thumb" src="${esc(mediaUrl(c.accessory.media.url))}" alt="">` : c.accessory?.type === 2 ? renderButton(c.accessory) : ''}</div>`;
       case 14: return `<hr class="v2sep${c.divider === false ? ' nodiv' : ''}${c.spacing === 2 ? ' lg' : ''}">`;
-      case 12: return `<div class="v2gal n${Math.min(c.items.length, 4)}">${c.items.map((i) => `<img src="${esc(i.media.url)}" alt="">`).join('')}</div>`;
+      case 12: return `<div class="v2gal n${Math.min(c.items.length, 4)}">${c.items.map((i) => `<img src="${esc(mediaUrl(i.media.url))}" alt="">`).join('')}</div>`;
       case 1: return `<div class="dbtns">${c.components.map(renderButton).join('')}</div>`;
       default: return '';
     }
@@ -637,6 +639,7 @@ function renderEmbed(e) {
   </div>`;
 }
 function renderResult(r) {
+  attachments = Object.fromEntries((r.files || []).filter((f) => f.image).map((f) => [f.name, f.image]));
   if (r.error) return `<div class="problem e"><span class="t">${esc(r.error)}</span></div>`;
   const flags = [r.stopped && 'stopped early', r.ephemeral && 'only visible to the user', r.channelId && `posts in channel ${r.channelId}`].filter(Boolean);
   const nothing = !r.content && !r.embeds.length && !r.files.length && !r.layout?.length;
@@ -646,7 +649,7 @@ function renderResult(r) {
     ${nothing ? '<div class="note">The command ran but sent nothing.</div>' : ''}
     ${r.layout?.length ? renderV2(r.layout) + (r.embeds.length ? '<div class="note">This message uses containers, so Discord will leave its embed out.</div>' : '') : r.embeds.map(renderEmbed).join('')}
     ${r.buttons.length ? `<div class="dbtns">${r.buttons.map(renderButton).join('')}</div>` : ''}
-    ${r.files.map((f) => `<details class="fileprev"><summary>${esc(f.name)} <span class="note">${(f.size / 1024).toFixed(1)} KB</span></summary><pre>${esc(f.preview)}${f.size > f.preview.length ? '\n...' : ''}</pre></details>`).join('')}
+    ${r.files.filter((f) => !f.image || !JSON.stringify(r.layout || []).includes(`attachment://${f.name}`)).map((f) => f.image ? `<img src="${f.image}" alt="" style="max-width:520px;width:100%;border-radius:6px;margin-top:8px">` : `<details class="fileprev"><summary>${esc(f.name)} <span class="note">${(f.size / 1024).toFixed(1)} KB</span></summary><pre>${esc(f.preview)}${f.size > f.preview.length ? '\n...' : ''}</pre></details>`).join('')}
     ${r.sent.length ? `<div class="note">${r.sent.map(esc).join('<br>')}</div>` : ''}
   </div></div>`;
 }

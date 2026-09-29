@@ -78,6 +78,36 @@ RoVuew didn't answer on this check, so there's no RoVuew file.
 $endif
 $attachFile[verify_$message[1].json;$jsonPretty]
 ---
+@name verifybadges
+@type button
+$c[The "Badge review" button. Most played games, badges from flagged or removed games, and a timeline picture. Uses the check the report came from, so it answers fast. Posted in the channel, since phones often can't show pictures in "only you can see this" replies.]
+$onlyPerms[manageroles;Only staff can open the badge review.]
+$httpAddHeader[Authorization;Bearer $env[BDX_VERIFY_KEY]]
+$httpGet[$env[BDX_VERIFY_URL]/check/$message[1]?chart=true]
+$onlyIf[$httpStatus==200;Couldn't load the badge review (error $httpStatus).]
+$attachFile[badges.png;$httpResult[badges;chart_png];base64]
+$addContainer[badges]
+$addTextDisplay[## Badge review · $httpResult[bdfd;username]]
+$addSeparator
+$addTextDisplay[$httpResult[bdfd;cards;badges]]
+$if[$httpResult[badges;chart_png]!=]
+$addMediaGallery[attachment://badges.png]
+$endif
+$addTextDisplay[-# Asked for by <@$authorID>]
+---
+@name verifyrisk
+@type button
+$c[The "Risk breakdown" button. A score for each part of the account, with the reason for every point.]
+$onlyPerms[manageroles;Only staff can open the risk breakdown.]
+$httpAddHeader[Authorization;Bearer $env[BDX_VERIFY_KEY]]
+$httpGet[$env[BDX_VERIFY_URL]/check/$message[1]?chart=true]
+$onlyIf[$httpStatus==200;Couldn't load the risk breakdown (error $httpStatus).]
+$addContainer[risk]
+$addTextDisplay[## Risk breakdown · $httpResult[bdfd;username]]
+$addSeparator
+$addTextDisplay[$httpResult[bdfd;cards;breakdown]]
+$addTextDisplay[-# Asked for by <@$authorID>]
+---
 @name verifyreport
 @type snippet
 $c[The report, one card per check. Used by !check and the join check, after a $httpGet to the Verify API. The card text comes ready made from Verify, under bdfd.cards. Plain cards with no colored edge.]
@@ -85,6 +115,13 @@ $addContainer[profile]
 $addSection[$httpResult[bdfd;cards;profile];$httpResult[bdfd;headshot]]
 $addSeparator
 $addTextDisplay[$httpResult[bdfd;cards;result]]
+
+$if[$httpResult[bdfd;cards;show_ai]==yes]
+$addContainer[ai]
+$addTextDisplay[## AI overview]
+$addSeparator
+$addTextDisplay[$httpResult[bdfd;cards;ai]]
+$endif
 
 $addContainer[discord]
 $addTextDisplay[## Discord]
@@ -125,5 +162,7 @@ $endif
 $addTextDisplay[-# Checked <t:$getTimestamp:R>]
 
 $closeContainer
+$addButton[no;verifybadges:$httpResult[discord_id];Badge review;primary]
+$addButton[no;verifyrisk:$httpResult[discord_id];Risk breakdown;primary]
 $addButton[no;verifyraw:$httpResult[discord_id];Full results;secondary]
 $addButton[no;$httpResult[bdfd;profile];Roblox profile;link]

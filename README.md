@@ -112,7 +112,7 @@ npm test
 - **Response:** `$reply $ephemeral $deleteCommand $dm $useChannel $allowMention $addReactions $addButton $sendMessage $channelSendMessage`
 - **Moderation:** `$ban $unban $kick $timeout $giveRole $takeRole $clear`
 - **JSON/web:** `$jsonParse $json $jsonPretty $jsonSet $jsonStringify $httpAddHeader $httpGet $httpStatus $httpResult`
-- **Files:** `$attachFile[name;content]` sends text as a file with the reply (up to 10)
+- **Files:** `$attachFile[name;content;base64?]` sends a file with the reply (up to 10). Add `base64` for pictures from an API, then show one in a card with `$addMediaGallery[attachment://name.png]`
 - **Reuse:** `$include[name]` runs a `@type snippet` command in place, sharing variables, the HTTP result and the embed
 - **Settings:** `$env[BDX_NAME]` reads a value from `.env`. Only names starting with `BDX_` work, so a command can't print your bot token.
 
@@ -127,6 +127,8 @@ In cooldown error messages, `%time%` is replaced with the time left. Use `\;`, `
 | `!verify` | Everyone | Checks their own account, gives the verified role if they pass, and logs the result for staff |
 | `!check @user` | Staff with Manage Roles | Full report: Roblox profile, Discord account and server info, RoVuew, TASE, Server Sweep, XTracker and worn items, one card each |
 | Join check | Automatic | Checks everyone who joins, posts the report in the log channel, and gives the role if they pass |
+| Badge review button | Staff with Manage Roles | Most played games, badges from flagged or removed games, farming bursts and a badge timeline picture |
+| Risk breakdown button | Staff with Manage Roles | A score for profile, inventory, badges, Discord and background checks, with the reason for every point |
 | Full results button | Staff with Manage Roles | Under every report. DMs RoVuew's whole reply and Verify's whole reply as `.json` files to whoever pressed it. If their DMs are closed, it shows them there instead |
 
 The report is one container card, kept in a snippet (`verifyreport`), so `!check` and the join check always look the same.

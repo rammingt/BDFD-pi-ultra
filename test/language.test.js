@@ -119,7 +119,9 @@ test('$httpAddHeader, $httpStatus and $env', async () => {
 test('$attachFile, $jsonPretty and $include', async () => {
   const r = await run('$jsonParse[{"a":{"b":1}}]$attachFile[a.json;$jsonPretty[a]]done');
   assert.equal(r.content, 'done');
-  assert.deepEqual(r.files, [{ name: 'a.json', content: '{\n  "b": 1\n}' }]);
+  assert.deepEqual(r.files, [{ name: 'a.json', content: '{\n  "b": 1\n}', encoding: 'utf8' }]);
+  const img = await run('$attachFile[x.png;aGk=;base64]$attachFile[empty.png;;base64]');
+  assert.deepEqual(img.files, [{ name: 'x.png', content: 'aGk=', encoding: 'base64' }]); // empty pictures are skipped
   assert.equal((await run('$jsonParse[{"a":1}]$jsonPretty[missing]')).content, '');
 
   const { loadDir } = require('../src/loader');

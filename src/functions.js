@@ -368,9 +368,12 @@ const F = {
   // ───────────── response behaviour ─────────────
   reply: { fn(ctx) { ctx.out.reply = true; return ''; } },
   attachFile: { fn(ctx, a) {
-    const [name, content] = need(a, 2, '$attachFile[file name;content]');
+    const [name, content] = need(a, 2, '$attachFile[file name;content;base64?]');
     if (ctx.out.files.length >= 10) fail('a message can carry at most 10 files');
-    ctx.out.files.push({ name: name.trim() || 'file.txt', content });
+    // base64 is for pictures and other binary files, like a chart from an API
+    const encoding = arg(a, 2).toLowerCase() === 'base64' ? 'base64' : 'utf8';
+    if (encoding === 'base64' && !content.trim()) return '';
+    ctx.out.files.push({ name: name.trim() || 'file.txt', content, encoding });
     return '';
   } },
   // Runs a "@type snippet" command in place, sharing this command's variables,

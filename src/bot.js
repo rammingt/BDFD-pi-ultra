@@ -43,7 +43,7 @@ async function startBot({ token, commandsDir, dataFile, prefix, watch = true, be
 
   const payloadOf = (r) => {
     if (!r.content && !r.embeds.length && !r.files?.length && !r.layout?.length) return null;
-    const files = (r.files || []).map((f) => new AttachmentBuilder(Buffer.from(f.content, 'utf8'), { name: f.name }));
+    const files = (r.files || []).map((f) => new AttachmentBuilder(Buffer.from(f.content, f.encoding || 'utf8'), { name: f.name }));
     const allowedMentions = r.allowMentions ? undefined : { parse: [] };
     if (r.layout?.length) {
       // Container layout: no content or embeds allowed, so text becomes a text block
@@ -52,7 +52,11 @@ async function startBot({ token, commandsDir, dataFile, prefix, watch = true, be
       const components = [];
       if (r.content) components.push({ type: 10, content: r.content.slice(0, 4000) });
       components.push(...r.layout, ...r.components);
-      for (const f of r.files) components.push({ type: 13, file: { url: `attachment://${f.name}` } });
+      // Files already shown somewhere, like a chart in a gallery, don't get a second file block.
+      const used = JSON.stringify(components);
+      for (const f of r.files) {
+        if (!used.includes(`attachment://${f.name}`)) components.push({ type: 13, file: { url: `attachment://${f.name}` } });
+      }
       return { components: fitText(components), files, flags: MessageFlags.IsComponentsV2, allowedMentions };
     }
     return { content: r.content ? r.content.slice(0, 2000) : undefined, embeds: r.embeds, components: r.components, files, allowedMentions };

@@ -257,7 +257,13 @@ function startPanel({ engine, client, commandsDir, envFile, password, port = 320
         command: cmd.name, type: cmd.type, content: r.content, embeds: r.embeds, stopped: r.stopped, ms: r.ms,
         ephemeral: r.ephemeral, channelId: r.channelId, layout: r.layout,
         buttons: r.components.flatMap((row) => row.components.map((b) => ({ label: b.label, url: b.url || null, id: b.custom_id || null, style: b.style }))),
-        files: (r.files || []).map((f) => ({ name: f.name, size: Buffer.byteLength(f.content), preview: f.content.slice(0, 20000) })),
+        files: (r.files || []).map((f) => {
+          const bytes = Buffer.from(f.content, f.encoding || 'utf8');
+          const image = /\.(png|jpe?g|gif|webp)$/i.test(f.name) && f.encoding === 'base64';
+          return image
+            ? { name: f.name, size: bytes.length, image: `data:image/${f.name.split('.').pop().toLowerCase().replace('jpg', 'jpeg')};base64,${f.content.trim()}` }
+            : { name: f.name, size: bytes.length, preview: bytes.toString('utf8').slice(0, 20000) };
+        }),
         sent,
       };
     },
