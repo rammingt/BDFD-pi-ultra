@@ -51,6 +51,8 @@ Edit commands and settings from a browser or your phone instead of the terminal.
 * **Settings** edits `.env`. Passwords and keys are never shown, only replaced
 * **Logs** shows what the bot printed, and there's a button to restart it
 * **Functions** is a searchable list. Tap one to put it in the editor
+* **RoVuew** edits the flag list (add, edit, remove, search) and the custom keywords, runs a quick check, and imports `flags.json` or `keywords.json` from an old RoVuew
+* **Verify** runs a check by Discord ID and shows the same report the bot posts, and edits Verify's settings (`~/Verify/.env`, or `VERIFY_ENV_FILE`)
 
 Turn it on by setting a password in `.env`, then restart:
 

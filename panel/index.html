@@ -129,7 +129,7 @@ li.CodeMirror-hint-active .u { color: #dfe2ff; }
 .dmsg { display: grid; grid-template-columns: 40px 1fr; gap: 12px; padding: 6px 0; }
 .dmsg .av { width: 40px; height: 40px; border-radius: 50%; background: var(--accent); display: grid; place-items: center; font-weight: 700; color: #fff; }
 .dmsg .who { font-weight: 600; } .dmsg .who small { color: var(--faint); font-weight: 400; margin-left: 6px; font-size: 12px; }
-.dmsg .txt { white-space: pre-wrap; word-wrap: break-word; }
+.txt { white-space: pre-wrap; word-wrap: break-word; }
 .mention { background: rgba(88,101,242,.3); color: #c9cdfb; border-radius: 3px; padding: 0 2px; }
 code.i { background: #2b2d31; padding: 1px 4px; border-radius: 4px; font-family: var(--mono); font-size: 12.5px; }
 .embed { margin-top: 6px; max-width: 520px; background: #2b2d31; border-left: 4px solid #1e1f22; border-radius: 4px; padding: 10px 14px 14px; display: grid; grid-template-columns: 1fr auto; gap: 8px; }
@@ -185,6 +185,20 @@ details.fileprev pre { max-height: 300px; overflow: auto; font-family: var(--mon
 .fn .u { color: var(--dim); text-align: right; overflow-wrap: anywhere; }
 .search { width: 100%; margin-bottom: 12px; }
 
+
+.subtabs { display: flex; gap: 4px; margin: 0 0 14px; flex-wrap: wrap; }
+.subtabs button { background: none; border: 1px solid transparent; color: var(--dim); }
+.subtabs button.on { color: var(--text); background: var(--panel2); border-color: var(--line); }
+.toolbar2 { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 10px 0; }
+.toolbar2 input:not([type=checkbox]):not([type=file]) { flex: 1; min-width: 160px; }
+.rvrow { display: grid; grid-template-columns: 1fr auto; gap: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); margin-bottom: 8px; }
+.rvrow .t { font-weight: 600; } .rvrow .t a { color: var(--text); }
+.rvrow .m { color: var(--dim); font-size: 13px; margin-top: 3px; overflow-wrap: anywhere; }
+.rvrow .acts { display: flex; gap: 6px; align-items: start; }
+.pill { display: inline-block; font-size: 11.5px; padding: 1px 7px; border-radius: 999px; background: var(--panel2); border: 1px solid var(--line); color: var(--dim); margin-right: 4px; }
+.pill.hot { color: #ff8a8c; border-color: #5b2527; }
+dialog label { display: block; margin-top: 10px; font-size: 13px; color: var(--dim); }
+
 /* dialog + toast */
 dialog { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 14px; padding: 20px; width: min(420px, calc(100% - 32px)); }
 dialog::backdrop { background: rgba(0,0,0,.55); }
@@ -231,6 +245,8 @@ dialog input, dialog select { width: 100%; margin-top: 6px; }
       <button data-view="settings">Settings</button>
       <button data-view="logs">Logs</button>
       <button data-view="functions">Functions</button>
+      <button data-view="rovuew">RoVuew</button>
+      <button data-view="verify">Verify</button>
     </nav>
     <div class="status" id="status" title=""><i class="dot" id="dot"></i><span id="statusText">...</span></div>
     <button class="ghost" id="logout" title="Log out">Log out</button>
@@ -284,6 +300,75 @@ dialog input, dialog select { width: 100%; margin-top: 6px; }
       <p class="sub">Tap one to put it in the editor where your cursor is. In the editor you can also type $ to get suggestions.</p>
       <input class="search" id="fnSearch" placeholder="Search, like http or role">
       <div id="fnList"></div>
+    </div></section>
+
+    <section class="view page hidden" id="v-rovuew"><div class="inner">
+      <h2>RoVuew</h2>
+      <p class="sub" id="rvStatus">Loading...</p>
+      <div class="subtabs">
+        <button data-rv="flags" class="on">Flag list</button>
+        <button data-rv="keywords">Keywords</button>
+        <button data-rv="check">Quick check</button>
+        <button data-rv="import">Import</button>
+      </div>
+
+      <div class="rvpane" id="rv-flags">
+        <div class="toolbar2"><input id="flagSearch" placeholder="Search by name, ID or reason"><button class="primary" id="flagAdd">Add flag</button></div>
+        <div id="flagList"></div>
+      </div>
+
+      <div class="rvpane hidden" id="rv-keywords">
+        <p class="note">Item names are scanned for these words on every check, on top of the built in list. Matches are guesses, shown apart from the flag list.</p>
+        <div class="toolbar2">
+          <input id="kwWord" placeholder="Word or phrase">
+          <select id="kwCat"></select>
+          <input id="kwScore" type="number" min="0" max="100" placeholder="Score" style="width:90px">
+          <button class="primary" id="kwAdd">Add</button>
+        </div>
+        <div id="kwList"></div>
+      </div>
+
+      <div class="rvpane hidden" id="rv-check">
+        <div class="toolbar2">
+          <input id="rcUser" placeholder="Roblox username or ID">
+          <select id="rcKind"><option value="accessories">Accessories</option><option value="clothing">Clothing</option><option value="badges">Badges</option></select>
+          <button class="primary" id="rcRun">Check</button>
+        </div>
+        <div id="rcOut"></div>
+      </div>
+
+      <div class="rvpane hidden" id="rv-import">
+        <p class="note">Paste or pick <code class="i">flags.json</code> or <code class="i">keywords.json</code> from the old RoVuew. <b>Add to the list</b> keeps what's here and skips duplicates. <b>Replace</b> swaps the whole list. A backup of the old file is kept either way.</p>
+        <div class="toolbar2">
+          <select id="imKind"><option value="flags">Flag list (flags.json)</option><option value="keywords">Keywords (keywords.json)</option></select>
+          <select id="imMode"><option value="merge">Add to the list</option><option value="replace">Replace the list</option></select>
+          <input type="file" id="imFile" accept=".json,application/json,text/plain">
+        </div>
+        <textarea id="imText" rows="10" placeholder='[ { "name": "...", "assetId": "...", ... } ]' style="width:100%;font-family:var(--mono);font-size:12.5px"></textarea>
+        <div class="toolbar2"><button class="primary" id="imGo">Import</button><span class="note" id="imNote"></span></div>
+      </div>
+    </div></section>
+
+    <section class="view page hidden" id="v-verify"><div class="inner">
+      <h2>Verify</h2>
+      <p class="sub">Run a check here to see the same report the bot posts, and change Verify's settings.</p>
+      <div class="subtabs">
+        <button data-vf="check" class="on">Check someone</button>
+        <button data-vf="settings">Verify settings</button>
+      </div>
+      <div class="vfpane" id="vf-check">
+        <div class="toolbar2">
+          <input id="vfId" placeholder="Discord user ID" inputmode="numeric">
+          <label class="note" style="display:flex;gap:6px;align-items:center;margin:0"><input type="checkbox" id="vfFresh"> Check again</label>
+          <button class="primary" id="vfRun">Run check</button>
+        </div>
+        <div id="vfOut"></div>
+      </div>
+      <div class="vfpane hidden" id="vf-settings">
+        <p class="note" id="vfFile"></p>
+        <div id="vfSettings"></div>
+        <div class="sticky"><button class="primary" id="vfSave">Save</button><span class="note">After saving, restart Verify on the Pi: <code class="i">sudo systemctl restart verify</code></span></div>
+      </div>
     </div></section>
   </main>
 </div>
@@ -345,6 +430,7 @@ function show(view) {
   if (view === 'settings') loadSettings();
   if (view === 'logs') loadLogs();
   if (view === 'functions') renderFunctions();
+  if (view === 'rovuew') loadRovuew();
   try { localStorage.setItem('bdx.view', view); } catch {}
 }
 $$('nav button').forEach((b) => (b.onclick = () => show(b.dataset.view)));
@@ -739,6 +825,145 @@ function renderFunctions() {
   }));
 }
 $('#fnSearch').oninput = renderFunctions;
+
+
+/* ---------- RoVuew ---------- */
+let rvFlags = [];
+let rvCats = [];
+function rvTab(name) {
+  $$('[data-rv]').forEach((b) => b.classList.toggle('on', b.dataset.rv === name));
+  $$('.rvpane').forEach((p) => p.classList.toggle('hidden', p.id !== `rv-${name}`));
+  if (name === 'flags') loadFlags();
+  if (name === 'keywords') loadKeywords();
+}
+$$('[data-rv]').forEach((b) => (b.onclick = () => rvTab(b.dataset.rv)));
+async function loadRovuew() {
+  try {
+    const s = (await api('GET', '/api/rovuew/status')).raw;
+    const keys = Object.entries(s.keys).filter(([, v]) => !v).map(([k]) => k);
+    $('#rvStatus').innerHTML = `${s.flags} flagged items · ${s.keywords} custom keywords · API ${s.apiOn ? `on, port ${s.apiPort}` : 'off (set ROVUEW_API_KEYS)'}${keys.length ? ` · missing keys: ${esc(keys.join(', '))}` : ''}<br><span class="note">Data folder: ${esc(s.dataDir)}</span>`;
+  } catch (e) { $('#rvStatus').textContent = e.message; }
+  rvTab($('[data-rv].on').dataset.rv);
+}
+async function loadFlags() {
+  rvFlags = (await api('GET', '/api/rovuew/flags')).list || [];
+  drawFlags();
+}
+function drawFlags() {
+  const q = $('#flagSearch').value.trim().toLowerCase();
+  const list = rvFlags.filter((f) => !q || [f.name, f.assetId, f.reason, f.type].join(' ').toLowerCase().includes(q));
+  $('#flagList').innerHTML = list.map((f) => `<div class="rvrow"><div>
+      <div class="t">${f.url ? `<a href="${esc(f.url)}" target="_blank" rel="noopener">${esc(f.name)}</a>` : esc(f.name)}</div>
+      <div class="m"><span class="pill ${f.score >= 5 ? 'hot' : ''}">score ${f.score}</span><span class="pill">${esc(f.type)}</span><code class="i">${esc(f.assetId)}</code></div>
+      <div class="m">${esc(f.reason || '')}</div>
+      <div class="m">Added by ${esc(f.addedBy || 'unknown')}${f.addedAt ? ` on ${new Date(f.addedAt).toLocaleDateString()}` : ''}</div>
+    </div><div class="acts"><button data-edit="${esc(f.id)}">Edit</button><button class="danger" data-del="${esc(f.id)}">Remove</button></div></div>`).join('')
+    || `<div class="note">${rvFlags.length ? 'Nothing matches that search.' : 'The flag list is empty. Add items here, with /flag add, or bring the old list over in Import.'}</div>`;
+  $$('[data-edit]').forEach((b) => (b.onclick = () => flagDialog(rvFlags.find((f) => f.id === b.dataset.edit))));
+  $$('[data-del]').forEach((b) => (b.onclick = async () => {
+    const f = rvFlags.find((x) => x.id === b.dataset.del);
+    if (!(await ask({ title: `Remove ${f.name}?`, html: '<p>Checks stop counting it right away.</p>', ok: 'Remove', danger: true }))) return;
+    try { await api('DELETE', `/api/rovuew/flags?id=${encodeURIComponent(f.id)}`, {}); toast('Removed'); loadFlags(); loadRovuew(); } catch (e) { toast(e.message); }
+  }));
+}
+$('#flagSearch').oninput = drawFlags;
+async function flagDialog(f) {
+  const d = await ask({ title: f ? `Edit ${f.name}` : 'Add a flag', ok: f ? 'Save' : 'Add', html: `
+    ${f ? '' : '<label>Roblox badge ID or asset ID<input id="fdId" inputmode="numeric" required></label>'}
+    <label>Name${f ? '' : ' (found automatically for items when left empty)'}<input id="fdName" value="${esc(f?.name || '')}"></label>
+    <label>Type<select id="fdType">${f ? '' : '<option value="">Detect it</option>'}${['accessory', 'clothing', 'badge'].map((t) => `<option ${f?.type === t ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
+    <label>Reason<input id="fdReason" value="${esc(f?.reason || '')}"></label>
+    <label>Score (0 to 100, default 1)<input id="fdScore" type="number" min="0" max="100" value="${f ? f.score : ''}"></label>
+    <label>Link (optional)<input id="fdLink" value="${esc(f?.link || '')}"></label>` });
+  if (!d) return;
+  const body = { name: $('#fdName').value, type: $('#fdType').value, reason: $('#fdReason').value, score: $('#fdScore').value, link: $('#fdLink').value };
+  try {
+    if (f) await api('PUT', `/api/rovuew/flags?id=${encodeURIComponent(f.id)}`, body);
+    else { toast('Checking the ID with Roblox...'); await api('POST', '/api/rovuew/flags', { ...body, assetId: $('#fdId').value }); }
+    toast(f ? 'Saved' : 'Added'); loadFlags(); loadRovuew();
+  } catch (e) { toast(e.message, 5000); }
+}
+$('#flagAdd').onclick = () => flagDialog(null);
+
+async function loadKeywords() {
+  const r = (await api('GET', '/api/rovuew/keywords')).raw;
+  rvCats = r.categories;
+  if (!$('#kwCat').options.length) $('#kwCat').innerHTML = rvCats.map((c) => `<option value="${c.value}">${esc(c.label)}</option>`).join('');
+  $('#kwList').innerHTML = r.keywords.map((k) => `<div class="rvrow"><div>
+      <div class="t"><code class="i">${esc(k.keyword)}</code></div>
+      <div class="m"><span class="pill">score ${k.score}</span><span class="pill">${esc(k.reason || k.category)}</span></div>
+    </div><div class="acts"><button class="danger" data-kdel="${esc(k.id)}">Remove</button></div></div>`).join('') || '<div class="note">No custom keywords yet. The built in list still runs.</div>';
+  $$('[data-kdel]').forEach((b) => (b.onclick = async () => {
+    try { await api('DELETE', `/api/rovuew/keywords?id=${encodeURIComponent(b.dataset.kdel)}`, {}); toast('Removed'); loadKeywords(); loadRovuew(); } catch (e) { toast(e.message); }
+  }));
+}
+$('#kwAdd').onclick = async () => {
+  try {
+    await api('POST', '/api/rovuew/keywords', { keyword: $('#kwWord').value, category: $('#kwCat').value, score: $('#kwScore').value });
+    $('#kwWord').value = ''; toast('Added'); loadKeywords(); loadRovuew();
+  } catch (e) { toast(e.message, 5000); }
+};
+
+$('#rcRun').onclick = async () => {
+  $('#rcOut').innerHTML = '<div class="note">Checking...</div>';
+  try {
+    const r = (await api('POST', '/api/rovuew/check', { user: $('#rcUser').value, kind: $('#rcKind').value })).raw;
+    if (r.private) { $('#rcOut').innerHTML = `<div class="note">${esc(r.username)}'s inventory is private.</div>`; return; }
+    const verdict = r.matches.length ? `<b style="color:#ff8a8c">Flagged</b> · score ${r.score}` : r.auto.length ? `<b style="color:var(--warn)">Nothing on the flag list</b>, but some names looked odd (score ${r.autoScore})` : '<b style="color:var(--ok)">Clear</b>';
+    $('#rcOut').innerHTML = `<div class="v2box"><span class="h2">${esc(r.username)}</span><div>${verdict}</div>
+      <div class="note">${r.scanError ? `Scan incomplete: ${esc(r.scanError)}` : `Scanned ${r.scanned}, ${r.matches.length} flagged`} · Roblox ID ${r.userId}</div>
+      ${r.matches.length ? `<span class="h3">On the flag list</span>${r.matches.map((m) => `<div>• <a href="${esc(m.url)}" target="_blank" rel="noopener" style="color:#00a8fc">${esc(m.name)}</a> · score ${m.score} · ${esc(m.reason)}</div>`).join('')}` : ''}
+      ${r.auto.length ? `<span class="h3">Automatic name matches</span>${r.auto.slice(0, 15).map((m) => `<div>• ${esc(m.name)} · ${m.score} · ${esc((m.reasons || []).join('; '))}</div>`).join('')}<div class="hs">Guesses from a word list, often wrong.</div>` : ''}
+    </div>`;
+  } catch (e) { $('#rcOut').innerHTML = `<div class="problem e"><span class="t">${esc(e.message)}</span></div>`; }
+};
+
+$('#imFile').onchange = async () => { const f = $('#imFile').files[0]; if (f) $('#imText').value = await f.text(); };
+$('#imGo').onclick = async () => {
+  const kind = $('#imKind').value; const mode = $('#imMode').value;
+  if (!$('#imText').value.trim()) return toast('Paste the file first, or pick it');
+  if (mode === 'replace' && !(await ask({ title: 'Replace the whole list?', html: '<p>Everything on the current list is swapped for what you pasted. A backup of the old file stays on the Pi.</p>', ok: 'Replace', danger: true }))) return;
+  try {
+    const r = (await api('POST', '/api/rovuew/import', { kind, mode, content: $('#imText').value })).raw;
+    $('#imNote').textContent = mode === 'merge' ? `Added ${r.added}, skipped ${r.skipped} already there. ${r.total} in total now.` : `Replaced. ${r.total} in total now.`;
+    toast('Imported'); loadRovuew();
+  } catch (e) { toast(e.message, 6000); }
+};
+
+/* ---------- Verify ---------- */
+let vfEntries = [];
+$$('[data-vf]').forEach((b) => (b.onclick = () => {
+  $$('[data-vf]').forEach((x) => x.classList.toggle('on', x === b));
+  $$('.vfpane').forEach((p) => p.classList.toggle('hidden', p.id !== `vf-${b.dataset.vf}`));
+  if (b.dataset.vf === 'settings') loadVerifySettings();
+}));
+$('#vfRun').onclick = async () => {
+  $('#vfOut').innerHTML = '<div class="note">Checking. A full check can take a while...</div>';
+  try {
+    const r = (await api('POST', '/api/verify/check', { discordId: $('#vfId').value, fresh: $('#vfFresh').checked })).raw;
+    attachments = {};
+    $('#vfOut').innerHTML = (r.content ? `<div class="txt">${md(r.content)}</div>` : '') + renderV2(r.layout || [])
+      + (r.buttons?.length ? `<div class="dbtns">${r.buttons.map(renderButton).join('')}</div>` : '') + `<div class="note">${r.ms} ms</div>`;
+  } catch (e) { $('#vfOut').innerHTML = `<div class="problem e"><span class="t">${esc(e.message)}</span></div>`; }
+};
+async function loadVerifySettings() {
+  try {
+    const r = (await api('GET', '/api/verify/settings')).raw;
+    vfEntries = r.entries;
+    $('#vfFile').textContent = r.file;
+    $('#vfSettings').innerHTML = vfEntries.map((s, i) => `<div class="setting"><label for="vs${i}">${esc(s.key)}</label>${s.note ? `<div class="hint">${esc(s.note)}</div>` : ''}
+      <input id="vs${i}" data-key="${esc(s.key)}" ${s.secret ? `type="password" placeholder="${s.isSet ? 'Set. Type here to change it.' : 'Not set yet'}" autocomplete="new-password"` : `value="${esc(s.value)}"`}></div>`).join('');
+  } catch (e) { $('#vfSettings').innerHTML = `<div class="problem e"><span class="t">${esc(e.message)}</span></div>`; }
+}
+$('#vfSave').onclick = async () => {
+  const changes = {};
+  for (const input of $$('#vfSettings input')) {
+    const s = vfEntries.find((x) => x.key === input.dataset.key);
+    if (s.secret) { if (input.value) changes[s.key] = input.value; } else if (input.value !== s.value) changes[s.key] = input.value;
+  }
+  if (!Object.keys(changes).length) return toast('Nothing changed');
+  try { await api('PUT', '/api/verify/settings', { changes }); toast('Saved. Restart Verify on the Pi to use it.', 5000); loadVerifySettings(); } catch (e) { toast(e.message); }
+};
 
 /* ---------- start ---------- */
 async function start() {

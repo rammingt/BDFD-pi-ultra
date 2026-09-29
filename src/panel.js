@@ -181,6 +181,7 @@ function startPanel({ engine, client, commandsDir, envFile, password, port = 320
   const failures = new Map(); // ip -> { count, until }
   const startedAt = Date.now();
   const docs = functionDocs(engine.registry);
+  const verifyEnv = process.env.VERIFY_ENV_FILE || path.join(require('os').homedir(), 'Verify', '.env');
 
   const safePath = (name) => {
     if (!FILE_NAME.test(name || '') || name.includes('..')) return null;
@@ -285,6 +286,38 @@ function startPanel({ engine, client, commandsDir, envFile, password, port = 320
       return { saved: true, restart };
     },
     'GET /api/logs': () => logs,
+
+    // Verify: run a check from the panel with the same report the bot posts
+    'POST /api/verify/check': async (q, body) => {
+      const id = String(body.discordId || '').trim();
+      if (!/^\d{15,25}$/.test(id)) return reply(400, { error: 'Use the long Discord user ID (right click them, Copy User ID)' });
+      if (!process.env.BDX_VERIFY_URL) return reply(400, { error: 'BDX_VERIFY_URL is not set in Settings' });
+      if (!engine.ofType('snippet').some((c) => c.name === 'verifyreport')) return reply(400, { error: 'The verifyreport snippet is missing from your commands' });
+      const code = `$httpAddHeader[Authorization;Bearer $env[BDX_VERIFY_KEY]]
+$httpGet[$env[BDX_VERIFY_URL]/check/${id}${body.fresh ? '?fresh=true' : ''}]
+$onlyIf[$httpStatus!=404;That person isn't linked with Bloxlink, or isn't in the server.]
+$onlyIf[$httpStatus==200;Verify answered with error $httpStatus.]
+$include[verifyreport]`;
+      const { parse } = require('./parser');
+      const r = await engine.execute({ name: 'panel verify', ast: parse(code, engine.registry) }, testEnv([]));
+      return { content: r.content, stopped: r.stopped, layout: r.layout, buttons: r.components.flatMap((row) => row.components), ms: r.ms };
+    },
+    'GET /api/verify/settings': () => {
+      if (!fs.existsSync(verifyEnv)) return reply(404, { error: `Couldn't find Verify's settings at ${verifyEnv}. Set VERIFY_ENV_FILE in Settings if it's somewhere else.` });
+      return { file: verifyEnv, entries: envEntries(verifyEnv) };
+    },
+    'PUT /api/verify/settings': (q, body) => {
+      if (!fs.existsSync(verifyEnv)) return reply(404, { error: "Couldn't find Verify's settings file" });
+      const changes = {};
+      for (const [k, v] of Object.entries(body.changes || {})) {
+        if (!/^[A-Z_][A-Z0-9_]*$/.test(k) || typeof v !== 'string' || /[\r\n]/.test(v)) return reply(400, { error: `Bad setting ${k}` });
+        changes[k] = v.trim();
+      }
+      writeEnv(verifyEnv, changes);
+      return { saved: true };
+    },
+
+    ...require('./rovuew/panelRoutes')(reply, 'web panel'),
     'POST /api/restart': () => {
       // systemd starts the bot again (Restart=always), which also reloads .env
       setTimeout(() => { engine.store.flush(); process.exit(0); }, 300);
