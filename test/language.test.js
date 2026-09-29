@@ -136,3 +136,10 @@ test('$attachFile, $jsonPretty and $include', async () => {
   assert.match((await e.execute(e.match('!show').cmd, { author, args: [] })).content, /ok/);
   fs.rmSync(dir, { recursive: true });
 });
+
+test('lines with only functions leave no blank lines', async () => {
+  assert.equal((await run('$title[a]\n$color[ff0000]\nHello\n$var[x;1]\nBye')).content, 'Hello\nBye');
+  assert.equal((await run('$username\nnext')).content, 'alice\nnext'); // printed something, so the break stays
+  assert.equal((await run('Top\n\nBottom')).content, 'Top\n\nBottom'); // blank lines you write yourself stay
+  assert.equal((await run('$if[1==1]\nYes\n$else\nNo\n$endif\nDone')).content, 'Yes\nDone');
+});

@@ -15,7 +15,15 @@ class Interpreter {
 
   async evalNodes(nodes, ctx) {
     let out = '';
-    for (const n of nodes) out += await this.evalNode(n, ctx);
+    for (const n of nodes) {
+      if (n.t === 'nl') {
+        // End of a line that only had functions on it: keep the line break only
+        // if those functions printed something, so $color[...] lines leave no gap.
+        if (out.slice(out.lastIndexOf('\n') + 1).trim()) out += '\n';
+        continue;
+      }
+      out += await this.evalNode(n, ctx);
+    }
     return out;
   }
 

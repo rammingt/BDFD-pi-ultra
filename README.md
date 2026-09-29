@@ -21,6 +21,29 @@ journalctl -u bdx -f            # logs
 ```
 In the Discord Developer Portal enable the **Message Content** and **Server Members** intents.
 
+## Web panel
+
+Edit commands and settings from a browser or your phone instead of the terminal.
+
+* File list with every command, and an editor with colors and `$` suggestions
+* **Save** puts a command live right away
+* **Check** points out typos in function names, a `[` that's never closed, and a `$if` that's missing its `$endif`
+* **Test** runs the code in the editor, even before saving, and shows what the bot would send, with embeds, buttons and files
+* **Settings** edits `.env`. Passwords and keys are never shown, only replaced
+* **Logs** shows what the bot printed, and there's a button to restart it
+* **Functions** is a searchable list. Tap one to put it in the editor
+
+Turn it on by setting a password in `.env`, then restart:
+
+```
+PANEL_PASSWORD=pick a long password
+PANEL_PORT=3200
+```
+
+Open `http://<your pi>:3200` on the same Wi-Fi, or `http://aesu:3200` from anything on your Tailscale. On a phone, use **Add to Home Screen** (Safari: share button; Chrome: menu) and it opens like an app.
+
+The panel can change your bot's code and settings, so keep it private. Don't put it on Tailscale Funnel or open its port on your router.
+
 ## Writing commands
 Put `.bdx` files anywhere in `commands/`. Files **hot-reload** on save — no restart.
 
@@ -123,5 +146,6 @@ Buttons and slash commands that take longer than 2 seconds are deferred automati
 ## Differences from BDFD
 - Mentions are **off by default** in replies (safer); use `$allowMention` to ping.
 - Error messages name the failing function; `$suppressErrors[msg]` replaces them.
+- A line that only has functions on it and prints nothing leaves no blank line in the message.
 - `$stop` throws away text written before it. Use `$stop[message]` or `$onlyIf[condition;message]` to reply and stop.
 - Scripts are sandboxed: no `eval`, loops capped, a step limit stops infinite loops.

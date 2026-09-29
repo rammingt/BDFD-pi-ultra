@@ -1,0 +1,719 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>BDX Panel</title>
+<meta name="theme-color" content="#111318">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="BDX">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/show-hint.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/dialog/dialog.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/mode/simple.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/show-hint.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/dialog/dialog.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/search/searchcursor.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/search/search.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+<style>
+:root {
+  --bg: #111318; --panel: #171a21; --panel2: #1d212a; --line: #2a2f3b; --text: #e6e8ee; --dim: #9aa1b2; --faint: #6b7285;
+  --accent: #5865f2; --accent2: #4752c4; --ok: #3ba55d; --warn: #faa61a; --bad: #ed4245;
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  --radius: 10px;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; border: 1px solid var(--line); background: var(--panel2); border-radius: 8px; padding: 7px 12px; }
+button:hover { border-color: #3a4152; }
+button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+button.primary:hover { background: var(--accent2); }
+button.danger { color: #ff8a8c; }
+button.ghost { background: none; border-color: transparent; color: var(--dim); }
+button:disabled { opacity: .5; cursor: default; }
+input, select, textarea { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; outline: none; }
+input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+.hidden { display: none !important; }
+
+/* login */
+#login { display: grid; place-items: center; height: 100%; padding: 16px; }
+#login form { width: 100%; max-width: 340px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 28px; display: grid; gap: 14px; }
+#login h1 { margin: 0; font-size: 20px; display: flex; align-items: center; gap: 10px; }
+#login p { margin: 0; color: var(--dim); }
+.err { color: #ff8a8c; min-height: 1.2em; }
+
+/* app shell */
+#app { display: grid; grid-template-rows: auto 1fr; height: 100%; }
+header { display: flex; align-items: center; gap: 6px; padding: 8px 12px; padding-top: max(8px, env(safe-area-inset-top)); background: var(--panel); border-bottom: 1px solid var(--line); min-width: 0; }
+.brand { display: flex; align-items: center; gap: 8px; font-weight: 700; margin-right: 8px; white-space: nowrap; }
+.brand img { width: 24px; height: 24px; }
+nav { display: flex; gap: 2px; overflow-x: auto; flex: 1; scrollbar-width: none; }
+nav button { background: none; border: none; color: var(--dim); padding: 7px 11px; white-space: nowrap; }
+nav button.on { color: var(--text); background: var(--panel2); }
+.status { display: flex; align-items: center; gap: 6px; color: var(--dim); font-size: 13px; white-space: nowrap; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--faint); }
+.dot.on { background: var(--ok); } .dot.off { background: var(--bad); }
+main { min-height: 0; overflow: hidden; }
+.view { height: 100%; }
+
+/* commands view */
+#v-commands { display: grid; grid-template-columns: 240px 1fr; }
+#files { border-right: 1px solid var(--line); background: var(--panel); display: flex; flex-direction: column; min-height: 0; }
+#files .head { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; color: var(--dim); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
+#fileList { overflow: auto; flex: 1; padding: 0 6px 12px; }
+.file { padding: 8px 10px; border-radius: 8px; cursor: pointer; margin-bottom: 2px; }
+.file:hover { background: var(--panel2); }
+.file.on { background: #252a36; }
+.file .n { font-weight: 600; display: flex; align-items: center; gap: 6px; }
+.file .c { color: var(--faint); font-size: 12px; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mod { width: 7px; height: 7px; border-radius: 50%; background: var(--warn); display: inline-block; }
+#editorHost { min-height: 0; overflow: hidden; position: relative; }
+#editorWrap { display: grid; grid-template-rows: auto 1fr auto; min-width: 0; min-height: 0; }
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 8px 10px; border-bottom: 1px solid var(--line); background: var(--panel); }
+.toolbar .fname { font-weight: 600; margin-right: auto; display: flex; align-items: center; gap: 8px; min-width: 0; }
+.toolbar .fname span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#menuBtn { display: none; }
+.CodeMirror { height: 100%; background: var(--bg); color: var(--text); font-family: var(--mono); font-size: 13.5px; line-height: 1.55; }
+.CodeMirror-gutters { background: var(--bg); border-right: 1px solid var(--line); }
+.CodeMirror-linenumber { color: #4a5063; }
+.CodeMirror-cursor { border-left-color: #fff; }
+.CodeMirror-selected, .CodeMirror-focused .CodeMirror-selected { background: #2b3350 !important; }
+.CodeMirror-matchingbracket { color: #fff !important; background: #33406a; }
+.cm-s-bdx .cm-meta { color: #c792ea; }
+.cm-s-bdx .cm-hr { color: var(--faint); }
+.cm-s-bdx .cm-keyword { color: #ff9e64; font-weight: 600; }
+.cm-s-bdx .cm-variable-2 { color: #7dcfff; }
+.cm-s-bdx .cm-bracket { color: #8a91a6; }
+.cm-s-bdx .cm-operator { color: #e0af68; }
+.cm-s-bdx .cm-comment { color: #5c6378; font-style: italic; }
+.cm-s-bdx .cm-string-2 { color: #9ece6a; }
+.cm-s-bdx .cm-number { color: #f7768e; }
+.line-warn { background: rgba(250,166,26,.08); }
+.line-err { background: rgba(237,66,69,.12); }
+.CodeMirror-hints { background: var(--panel2); border: 1px solid var(--line); font-family: var(--mono); font-size: 13px; z-index: 50; }
+.CodeMirror-hint { color: var(--text); }
+li.CodeMirror-hint-active { background: var(--accent); color: #fff; }
+.CodeMirror-hint .u { color: var(--faint); margin-left: 8px; }
+li.CodeMirror-hint-active .u { color: #dfe2ff; }
+.CodeMirror-dialog { background: var(--panel2); color: var(--text); border-color: var(--line) !important; }
+.CodeMirror-dialog input { color: var(--text); }
+.empty { display: grid; place-items: center; height: 100%; color: var(--faint); text-align: center; padding: 24px; }
+
+/* output drawer */
+#out { border-top: 1px solid var(--line); background: var(--panel); max-height: 45vh; display: flex; flex-direction: column; }
+#out .tabs { display: flex; align-items: center; gap: 2px; padding: 4px 8px; border-bottom: 1px solid var(--line); }
+#out .tabs button { background: none; border: none; color: var(--dim); padding: 6px 10px; }
+#out .tabs button.on { color: var(--text); }
+#out .tabs .sp { flex: 1; }
+#outBody { overflow: auto; padding: 10px 12px; }
+#out.min #outBody { display: none; }
+.problem { display: flex; gap: 10px; padding: 6px 8px; border-radius: 6px; cursor: pointer; }
+.problem:hover { background: var(--panel2); }
+.problem .ln { color: var(--faint); font-family: var(--mono); min-width: 52px; }
+.problem.e .t { color: #ff8a8c; }
+.badge { display: inline-block; font-size: 11px; padding: 1px 6px; border-radius: 999px; background: var(--panel2); color: var(--dim); border: 1px solid var(--line); }
+.badge.w { color: var(--warn); border-color: #5b4520; }
+.badge.e { color: #ff8a8c; border-color: #5b2527; }
+.okline { color: var(--ok); }
+
+/* discord preview */
+.dmsg { display: grid; grid-template-columns: 40px 1fr; gap: 12px; padding: 6px 0; }
+.dmsg .av { width: 40px; height: 40px; border-radius: 50%; background: var(--accent); display: grid; place-items: center; font-weight: 700; color: #fff; }
+.dmsg .who { font-weight: 600; } .dmsg .who small { color: var(--faint); font-weight: 400; margin-left: 6px; font-size: 12px; }
+.dmsg .txt { white-space: pre-wrap; word-wrap: break-word; }
+.mention { background: rgba(88,101,242,.3); color: #c9cdfb; border-radius: 3px; padding: 0 2px; }
+code.i { background: #2b2d31; padding: 1px 4px; border-radius: 4px; font-family: var(--mono); font-size: 12.5px; }
+.embed { margin-top: 6px; max-width: 520px; background: #2b2d31; border-left: 4px solid #1e1f22; border-radius: 4px; padding: 10px 14px 14px; display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+.embed .et { font-weight: 700; } .embed .et a { color: #00a8fc; text-decoration: none; }
+.embed .ed { white-space: pre-wrap; font-size: 13.5px; }
+.embed .thumb { width: 80px; height: 80px; border-radius: 4px; object-fit: cover; grid-row: 1 / span 3; grid-column: 2; }
+.fields { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; grid-column: 1 / -1; }
+.field { grid-column: 1 / -1; font-size: 13.5px; } .field.in { grid-column: auto; }
+.field b { display: block; font-size: 13px; margin-bottom: 2px; }
+.field div { white-space: pre-wrap; }
+.embed .img { max-width: 100%; border-radius: 4px; grid-column: 1 / -1; }
+.embed .ft { font-size: 12px; color: var(--dim); grid-column: 1 / -1; }
+.dbtns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.dbtn { border-radius: 4px; padding: 6px 14px; border: none; color: #fff; font-weight: 500; font-size: 13.5px; }
+.dbtn.s1 { background: #5865f2; } .dbtn.s2 { background: #4e5058; } .dbtn.s3 { background: #248046; } .dbtn.s4 { background: #da373c; } .dbtn.s5 { background: #4e5058; }
+details.fileprev { margin-top: 8px; background: #2b2d31; border-radius: 6px; padding: 8px 10px; max-width: 520px; }
+details.fileprev pre { max-height: 300px; overflow: auto; font-family: var(--mono); font-size: 12px; margin: 8px 0 0; white-space: pre-wrap; }
+.note { color: var(--dim); font-size: 13px; margin-top: 8px; }
+.testbar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 10px; }
+.testbar input { flex: 1; min-width: 140px; }
+
+/* settings, logs, functions */
+.page { height: 100%; overflow: auto; padding: 20px 16px 40px; }
+.page .inner { max-width: 760px; margin: 0 auto; }
+.page h2 { margin: 0 0 4px; font-size: 18px; }
+.page .sub { color: var(--dim); margin: 0 0 18px; }
+.setting { display: grid; gap: 4px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.setting label { font-family: var(--mono); font-size: 13px; font-weight: 600; }
+.setting .hint { color: var(--faint); font-size: 12.5px; }
+.setting input { width: 100%; }
+.sticky { position: sticky; bottom: 0; padding: 12px 0; background: linear-gradient(transparent, var(--bg) 30%); display: flex; gap: 8px; align-items: center; }
+.banner { background: #2a2413; border: 1px solid #5b4520; color: #f5d08a; padding: 10px 12px; border-radius: 8px; margin-bottom: 14px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.log { font-family: var(--mono); font-size: 12.5px; white-space: pre-wrap; word-break: break-word; padding: 3px 0; border-bottom: 1px solid #1c2029; }
+.log .tm { color: var(--faint); margin-right: 8px; }
+.log.error { color: #ff8a8c; } .log.warn { color: var(--warn); }
+.fn { display: flex; justify-content: space-between; gap: 10px; padding: 8px 10px; border-radius: 8px; cursor: pointer; font-family: var(--mono); font-size: 13px; }
+.fn:hover { background: var(--panel2); }
+.fn .u { color: var(--dim); text-align: right; overflow-wrap: anywhere; }
+.search { width: 100%; margin-bottom: 12px; }
+
+/* dialog + toast */
+dialog { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 14px; padding: 20px; width: min(420px, calc(100% - 32px)); }
+dialog::backdrop { background: rgba(0,0,0,.55); }
+dialog h3 { margin: 0 0 8px; }
+dialog .row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+dialog input, dialog select { width: 100%; margin-top: 6px; }
+#toast { position: fixed; left: 50%; bottom: max(20px, env(safe-area-inset-bottom)); transform: translateX(-50%); background: #262b36; border: 1px solid var(--line); padding: 10px 14px; border-radius: 10px; opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 100; max-width: calc(100% - 32px); }
+#toast.show { opacity: 1; }
+#scrim { display: none; }
+
+@media (max-width: 760px) {
+  #v-commands { grid-template-columns: 1fr; }
+  #files { position: fixed; inset: 0 auto 0 0; width: 82%; max-width: 300px; z-index: 40; transform: translateX(-100%); transition: transform .2s; padding-top: env(safe-area-inset-top); }
+  #files.open { transform: none; }
+  #scrim.open { display: block; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 30; }
+  #menuBtn { display: inline-block; }
+  .brand span { display: none; }
+  .status span { display: none; }
+  .toolbar { flex-wrap: nowrap; gap: 4px; padding: 6px 8px; }
+  .toolbar button { padding: 6px 10px; }
+  #checkBtn { display: none; }
+  #out { max-height: 55vh; }
+  .fields { grid-template-columns: 1fr 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div id="login" class="hidden">
+  <form id="loginForm">
+    <h1><img src="icon.svg" width="28" height="28" alt="">BDX Panel</h1>
+    <p>Log in with the PANEL_PASSWORD from your .env file.</p>
+    <input id="pw" type="password" placeholder="Password" autocomplete="current-password" autofocus>
+    <button class="primary" type="submit">Log in</button>
+    <div class="err" id="loginErr"></div>
+  </form>
+</div>
+
+<div id="app" class="hidden">
+  <header>
+    <div class="brand"><img src="icon.svg" alt=""><span>BDX</span></div>
+    <nav>
+      <button data-view="commands" class="on">Commands</button>
+      <button data-view="settings">Settings</button>
+      <button data-view="logs">Logs</button>
+      <button data-view="functions">Functions</button>
+    </nav>
+    <div class="status" id="status" title=""><i class="dot" id="dot"></i><span id="statusText">...</span></div>
+    <button class="ghost" id="logout" title="Log out">Log out</button>
+  </header>
+  <main>
+    <section class="view" id="v-commands">
+      <aside id="files">
+        <div class="head">Files <button id="newFile" title="New file">+ New</button></div>
+        <div id="fileList"></div>
+      </aside>
+      <div id="scrim"></div>
+      <div id="editorWrap">
+        <div class="toolbar">
+          <button id="menuBtn" title="Files">☰</button>
+          <div class="fname"><span id="fname">No file open</span><i class="mod hidden" id="modDot" title="Not saved yet"></i></div>
+          <button id="checkBtn" disabled>Check</button>
+          <button id="testBtn" disabled>Test</button>
+          <button id="saveBtn" class="primary" disabled>Save</button>
+          <button id="moreBtn" disabled title="More">⋯</button>
+        </div>
+        <div id="editorHost"><div class="empty" id="emptyState">Pick a file on the left, or make a new one.<br>Saving puts it live right away.</div></div>
+        <div id="out" class="min">
+          <div class="tabs">
+            <button data-out="problems" class="on">Problems <span class="badge" id="probCount">0</span></button>
+            <button data-out="test">Test</button>
+            <span class="sp"></span>
+            <button id="outToggle" title="Show or hide">▴</button>
+          </div>
+          <div id="outBody"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="view page hidden" id="v-settings"><div class="inner">
+      <h2>Settings</h2>
+      <p class="sub">These live in the .env file. Settings starting with BDX_ and PREFIX work right away. The token and panel settings need a restart.</p>
+      <div id="restartBanner" class="banner hidden">Some changes need a restart to work. <button class="primary" id="restartBtn">Restart bot now</button></div>
+      <div id="settingsList"></div>
+      <div class="sticky"><button class="primary" id="saveSettings">Save settings</button><button id="addSetting">Add a setting</button><span class="note" id="settingsNote"></span></div>
+    </div></section>
+
+    <section class="view page hidden" id="v-logs"><div class="inner">
+      <h2>Logs</h2>
+      <p class="sub">What the bot printed since it last started. Updates by itself.</p>
+      <div class="sticky" style="position:static;padding-top:0"><button id="restartBtn2">Restart bot</button></div>
+      <div id="logList"></div>
+    </div></section>
+
+    <section class="view page hidden" id="v-functions"><div class="inner">
+      <h2>Functions</h2>
+      <p class="sub">Tap one to put it in the editor where your cursor is. In the editor you can also type $ to get suggestions.</p>
+      <input class="search" id="fnSearch" placeholder="Search, like http or role">
+      <div id="fnList"></div>
+    </div></section>
+  </main>
+</div>
+
+<dialog id="dlg"><form method="dialog" id="dlgForm"><h3 id="dlgTitle"></h3><div id="dlgBody"></div><div class="row"><button value="cancel" formnovalidate>Cancel</button><button value="ok" class="primary" id="dlgOk">OK</button></div></form></dialog>
+<div id="toast"></div>
+
+<script>
+'use strict';
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+const state = { file: null, saved: '', files: [], functions: [], problems: { errors: [], warnings: [] }, marks: [], outTab: 'problems', lastTest: null, commands: [] };
+let cm = null;
+
+/* ---------- api ---------- */
+async function api(method, url, body) {
+  const res = await fetch(url, { method, headers: body ? { 'content-type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined, credentials: 'same-origin' });
+  let data = {};
+  try { data = await res.json(); } catch {}
+  if (res.status === 401 && url !== '/api/login') { showLogin(); throw new Error('Please log in'); }
+  if (!res.ok && res.status !== 422) throw new Error(data.error || `Error ${res.status}`);
+  return { status: res.status, ...data, list: Array.isArray(data) ? data : undefined, raw: data };
+}
+function toast(msg, ms = 2600) {
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), ms);
+}
+function ask({ title, html, ok = 'OK', danger = false }) {
+  return new Promise((resolve) => {
+    const d = $('#dlg');
+    $('#dlgTitle').textContent = title; $('#dlgBody').innerHTML = html || '';
+    $('#dlgOk').textContent = ok; $('#dlgOk').className = danger ? 'danger' : 'primary';
+    d.returnValue = '';
+    d.onclose = () => resolve(d.returnValue === 'ok' ? d : null);
+    d.showModal();
+    const first = $('input, select', d); if (first) setTimeout(() => first.focus(), 30);
+  });
+}
+
+/* ---------- login ---------- */
+function showLogin() { $('#app').classList.add('hidden'); $('#login').classList.remove('hidden'); $('#pw').focus(); }
+$('#loginForm').onsubmit = async (e) => {
+  e.preventDefault();
+  $('#loginErr').textContent = '';
+  try {
+    const r = await api('POST', '/api/login', { password: $('#pw').value });
+    if (r.status === 200) { $('#pw').value = ''; start(); }
+  } catch (err) { $('#loginErr').textContent = err.message; }
+};
+$('#logout').onclick = async () => { await api('POST', '/api/logout', {}).catch(() => {}); showLogin(); };
+
+/* ---------- navigation ---------- */
+function show(view) {
+  $$('nav button').forEach((b) => b.classList.toggle('on', b.dataset.view === view));
+  $$('.view').forEach((v) => v.classList.toggle('hidden', v.id !== `v-${view}`));
+  if (view === 'commands' && cm) setTimeout(() => cm.refresh(), 10);
+  if (view === 'settings') loadSettings();
+  if (view === 'logs') loadLogs();
+  if (view === 'functions') renderFunctions();
+  try { localStorage.setItem('bdx.view', view); } catch {}
+}
+$$('nav button').forEach((b) => (b.onclick = () => show(b.dataset.view)));
+
+/* ---------- status ---------- */
+async function loadStatus() {
+  try {
+    const s = (await api('GET', '/api/status')).raw;
+    $('#dot').className = `dot ${s.bot ? 'on' : 'off'}`;
+    $('#statusText').textContent = s.bot ? `${s.bot.tag}` : 'Bot offline';
+    $('#status').title = s.bot ? `${s.bot.tag}, in ${s.bot.servers} server(s), ${s.commands} commands, prefix ${s.prefix}` : 'The bot is not connected to Discord. Check the token in Settings and the Logs tab.';
+  } catch {}
+}
+
+/* ---------- editor ---------- */
+CodeMirror.defineSimpleMode('bdx', {
+  start: [
+    { regex: /---\s*$/, sol: true, token: 'hr' },
+    { regex: /@\w+.*/, sol: true, token: 'meta' },
+    { regex: /\\[$;\[\]\\]/, token: 'string-2' },
+    { regex: /\$c\[[^\]]*\]/, token: 'comment' },
+    { regex: /\$(?:if|elseif|else|endif|onlyIf|stop|include)(?![a-zA-Z0-9])/i, token: 'keyword' },
+    { regex: /\$[a-zA-Z0-9]+/, token: 'variable-2' },
+    { regex: /[\[\]]/, token: 'bracket' },
+    { regex: /==|!=|>=|<=|&&|\|\||;/, token: 'operator' },
+    { regex: /<@!?\d+>|<#\d+>|<@&\d+>/, token: 'number' },
+  ],
+});
+
+function bdxHint(editor) {
+  const cur = editor.getCursor();
+  const line = editor.getLine(cur.line).slice(0, cur.ch);
+  const m = /\$([a-zA-Z0-9]*)$/.exec(line);
+  if (!m) return null;
+  const word = m[1].toLowerCase();
+  const list = state.functions.filter((f) => f.name.toLowerCase().startsWith(word)).slice(0, 60).map((f) => ({
+    text: `$${f.name}`,
+    displayText: f.name,
+    render: (el) => { el.innerHTML = `$${esc(f.name)}<span class="u">${esc(f.usage.replace(/^\$\w+/, ''))}</span>`; },
+  }));
+  return { list, from: CodeMirror.Pos(cur.line, cur.ch - m[0].length), to: cur };
+}
+
+function makeEditor() {
+  $('#emptyState')?.remove();
+  cm = CodeMirror($('#editorHost'), {
+    mode: 'bdx', theme: 'bdx', lineNumbers: true, lineWrapping: true, matchBrackets: true, indentUnit: 2, tabSize: 2,
+    extraKeys: {
+      'Ctrl-S': () => save(), 'Cmd-S': () => save(),
+      'Ctrl-Enter': () => runTest(), 'Cmd-Enter': () => runTest(),
+      'Ctrl-Space': 'autocomplete',
+    },
+    hintOptions: { hint: bdxHint, completeSingle: false },
+  });
+  $('#editorHost').style.minHeight = '0';
+  $('#editorHost').style.height = '100%';
+  cm.on('change', () => { updateModified(); scheduleCheck(); });
+  cm.on('inputRead', (ed, ch) => { if (/[$a-zA-Z0-9]/.test(ch.text[0] || '') && /\$[a-zA-Z0-9]*$/.test(ed.getLine(ed.getCursor().line).slice(0, ed.getCursor().ch))) ed.showHint(); });
+}
+
+function isJson() { return state.file === 'variables.json'; }
+function dirty() { return cm && state.file && cm.getValue() !== state.saved; }
+function updateModified() { $('#modDot').classList.toggle('hidden', !dirty()); renderFiles(); }
+window.addEventListener('beforeunload', (e) => { if (dirty()) { e.preventDefault(); e.returnValue = ''; } });
+
+/* ---------- files ---------- */
+async function loadFiles() {
+  state.files = (await api('GET', '/api/files')).list;
+  renderFiles();
+}
+function renderFiles() {
+  $('#fileList').innerHTML = state.files.map((f) => `
+    <div class="file ${f.name === state.file ? 'on' : ''}" data-name="${esc(f.name)}">
+      <div class="n">${esc(f.name)} ${f.name === state.file && dirty() ? '<i class="mod"></i>' : ''}</div>
+      <div class="c">${f.name === 'variables.json' ? 'Starting values for saved variables' : f.commands.length ? esc(f.commands.map((c) => (c.type === 'prefix' ? c.name : `${c.name} (${c.type})`)).join(', ')) : 'No commands loaded'}</div>
+    </div>`).join('') || '<div class="note" style="padding:10px">No files yet.</div>';
+  $$('.file').forEach((el) => (el.onclick = () => openFile(el.dataset.name)));
+}
+async function openFile(name) {
+  if (dirty() && name !== state.file) {
+    const ok = await ask({ title: 'Leave without saving?', html: `<p>${esc(state.file)} has changes that aren't saved.</p>`, ok: 'Leave', danger: true });
+    if (!ok) return;
+  }
+  const f = await api('GET', `/api/file?name=${encodeURIComponent(name)}`);
+  if (!cm) makeEditor();
+  state.file = name; state.saved = f.content;
+  cm.setOption('mode', isJson() ? { name: 'javascript', json: true } : 'bdx');
+  cm.setValue(f.content); cm.clearHistory(); cm.focus();
+  $('#fname').textContent = name;
+  ['checkBtn', 'saveBtn', 'moreBtn'].forEach((id) => ($(`#${id}`).disabled = false));
+  $('#testBtn').disabled = isJson();
+  closeDrawer(); updateModified(); check();
+  state.lastTest = null; if (state.outTab === 'test') renderOut();
+  try { localStorage.setItem('bdx.file', name); } catch {}
+}
+$('#newFile').onclick = async () => {
+  const d = await ask({ title: 'New file', html: `<label>File name<input id="nfName" placeholder="welcome" pattern="[\\w .()]{1,60}"></label>
+    <label style="display:block;margin-top:12px">Start with<select id="nfTpl">
+      <option value="prefix">A normal command, like !hello</option>
+      <option value="slash">A slash command, like /hello</option>
+      <option value="button">A button handler</option>
+      <option value="join">Something that runs when someone joins</option>
+      <option value="empty">An empty file</option></select></label>`, ok: 'Create' });
+  if (!d) return;
+  let name = $('#nfName').value.trim().replace(/\.bdx$/i, '');
+  if (!name) return;
+  const tpl = {
+    prefix: `@name ${name}\n@description What this command does\n$reply\nHello $username!\n`,
+    slash: `@name ${name}\n@type slash\n@description What this command does\n@option text:string:Something to say:required\n$ephemeral\nYou said: $message[text]\n`,
+    button: `@name ${name}\n@type button\n$c[Handles buttons with the ID ${name} or ${name}:something. $message[1] is the part after the colon.]\n$ephemeral\nYou pressed it!\n`,
+    join: `@name ${name}\n@type join\n$c[Runs when someone joins. Use $useChannel[channel ID] to pick where it posts.]\nWelcome <@$authorID>!\n`,
+    empty: '',
+  }[$('#nfTpl').value];
+  try {
+    const r = await api('PUT', `/api/file?name=${encodeURIComponent(name + '.bdx')}`, { content: tpl, create: true, force: true });
+    if (r.saved) { await loadFiles(); await openFile(name + '.bdx'); toast('Created'); }
+  } catch (e) { toast(e.message); }
+};
+
+/* ---------- check ---------- */
+let checkTimer = null;
+function scheduleCheck() { clearTimeout(checkTimer); checkTimer = setTimeout(check, 700); }
+async function check() {
+  if (!cm || !state.file) return;
+  const r = await api('POST', '/api/check', { name: state.file, content: cm.getValue() }).catch(() => null);
+  if (!r) return;
+  state.problems = { errors: r.errors || [], warnings: r.warnings || [] };
+  state.commands = r.commands || [];
+  state.marks.forEach((l) => { cm.removeLineClass(l.line, 'background', l.cls); });
+  state.marks = [];
+  for (const w of state.problems.warnings) {
+    const line = Math.min(Math.max(w.line - 1, 0), cm.lineCount() - 1);
+    cm.addLineClass(line, 'background', 'line-warn'); state.marks.push({ line, cls: 'line-warn' });
+  }
+  const n = state.problems.errors.length + state.problems.warnings.length;
+  $('#probCount').textContent = n;
+  $('#probCount').className = `badge ${state.problems.errors.length ? 'e' : n ? 'w' : ''}`;
+  if (state.outTab === 'problems') renderOut();
+}
+$('#checkBtn').onclick = async () => { await check(); setOut('problems', true); const n = state.problems.errors.length + state.problems.warnings.length; toast(n ? `${n} thing${n === 1 ? '' : 's'} to look at` : 'Looks good'); };
+
+/* ---------- save ---------- */
+async function save(force = false) {
+  if (!cm || !state.file) return;
+  const content = cm.getValue();
+  const r = await api('PUT', `/api/file?name=${encodeURIComponent(state.file)}`, { content, force }).catch((e) => { toast(e.message); return null; });
+  if (!r) return;
+  if (!r.saved) {
+    state.problems = { errors: r.errors, warnings: r.warnings }; setOut('problems', true);
+    const d = await ask({ title: 'This file has an error', html: `<p>${esc(r.errors[0])}</p><p class="note">If you save anyway, the commands in this file stop working until it's fixed.</p>`, ok: 'Save anyway', danger: true });
+    if (d) return save(true);
+    return;
+  }
+  state.saved = content; updateModified();
+  await loadFiles();
+  toast(r.warnings?.length ? `Saved and live, with ${r.warnings.length} warning${r.warnings.length === 1 ? '' : 's'}` : 'Saved and live');
+  check();
+}
+$('#saveBtn').onclick = () => save();
+
+/* ---------- more menu ---------- */
+$('#moreBtn').onclick = async () => {
+  const d = await ask({ title: state.file, html: `<p class="note">What do you want to do with this file?</p>
+    <div style="display:grid;gap:8px;margin-top:10px">
+      <button type="button" id="mRevert">Undo all changes since last save</button>
+      <button type="button" id="mRename">Rename</button>
+      <button type="button" class="danger" id="mDelete">Delete this file</button>
+    </div>`, ok: 'Close' });
+  void d;
+};
+document.addEventListener('click', async (e) => {
+  const id = e.target.id;
+  if (!['mRevert', 'mRename', 'mDelete'].includes(id)) return;
+  $('#dlg').close();
+  await new Promise((r) => setTimeout(r, 120)); // let the first dialog finish closing
+  if (id === 'mRevert') { cm.setValue(state.saved); toast('Changes undone'); }
+  if (id === 'mDelete') {
+    if (state.file === 'variables.json') return toast('variables.json can be emptied but not deleted');
+    const ok = await ask({ title: `Delete ${state.file}?`, html: '<p>Its commands stop working right away. A copy is kept on the Pi in case you need it back.</p>', ok: 'Delete', danger: true });
+    if (!ok) return;
+    await api('DELETE', `/api/file?name=${encodeURIComponent(state.file)}`, {}).catch((err) => toast(err.message));
+    state.file = null; state.saved = ''; cm.setValue(''); state.saved = '';
+    $('#fname').textContent = 'No file open'; ['checkBtn', 'saveBtn', 'moreBtn', 'testBtn'].forEach((x) => ($(`#${x}`).disabled = true));
+    await loadFiles(); toast('Deleted');
+  }
+  if (id === 'mRename') {
+    const d2 = await ask({ title: 'Rename', html: `<input id="rnName" value="${esc(state.file.replace(/\.bdx$/, ''))}">`, ok: 'Rename' });
+    if (!d2) return;
+    const to = $('#rnName').value.trim().replace(/\.bdx$/i, '') + '.bdx';
+    if (to === state.file) return;
+    try {
+      const r = await api('PUT', `/api/file?name=${encodeURIComponent(to)}`, { content: cm.getValue(), create: true, force: true });
+      if (!r.saved) return;
+      await api('DELETE', `/api/file?name=${encodeURIComponent(state.file)}`, {});
+      state.saved = cm.getValue(); state.file = to; $('#fname').textContent = to;
+      await loadFiles(); toast('Renamed');
+    } catch (err) { toast(err.message); }
+  }
+});
+
+/* ---------- output drawer ---------- */
+function setOut(tab, open) {
+  state.outTab = tab;
+  $$('#out .tabs [data-out]').forEach((b) => b.classList.toggle('on', b.dataset.out === tab));
+  if (open) $('#out').classList.remove('min');
+  $('#outToggle').textContent = $('#out').classList.contains('min') ? '▴' : '▾';
+  renderOut();
+}
+$$('#out .tabs [data-out]').forEach((b) => (b.onclick = () => setOut(b.dataset.out, true)));
+$('#outToggle').onclick = () => { $('#out').classList.toggle('min'); setOut(state.outTab); setTimeout(() => cm?.refresh(), 10); };
+
+function renderOut() {
+  const body = $('#outBody');
+  if (state.outTab === 'problems') {
+    const { errors, warnings } = state.problems;
+    if (!state.file) { body.innerHTML = '<div class="note">Open a file to see problems.</div>'; return; }
+    if (!errors.length && !warnings.length) { body.innerHTML = '<div class="okline">No problems found.</div>'; return; }
+    body.innerHTML = errors.map((e) => `<div class="problem e"><span class="ln">error</span><span class="t">${esc(e)}</span></div>`).join('')
+      + warnings.map((w) => `<div class="problem" data-line="${w.line}"><span class="ln">line ${w.line}</span><span class="t">${esc(w.text)}</span></div>`).join('');
+    $$('.problem[data-line]', body).forEach((el) => (el.onclick = () => { const l = +el.dataset.line - 1; cm.setCursor({ line: l, ch: 0 }); cm.scrollIntoView({ line: l, ch: 0 }, 80); cm.focus(); }));
+    return;
+  }
+  const cmds = state.commands.filter((c) => c.type !== 'snippet');
+  const pick = cmds.length > 1 ? `<select id="tCmd">${cmds.map((c) => `<option ${state.lastTest?.command === c.name ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select>` : '';
+  body.innerHTML = `<div class="testbar">${pick}<input id="tArgs" placeholder="What comes after the command, like @someone 50" value="${esc(state.testArgs || '')}"><button class="primary" id="tRun">Run test</button></div>
+    <div class="note" style="margin-top:0;margin-bottom:10px">Runs the code in the editor, even if it isn't saved. It runs as a fake user outside any server, so things like giving roles won't work here. Web requests are real.</div>
+    <div id="tResult">${state.lastTest ? renderResult(state.lastTest) : ''}</div>`;
+  $('#tRun').onclick = runTest;
+  $('#tArgs').onkeydown = (e) => { if (e.key === 'Enter') runTest(); };
+}
+$('#testBtn').onclick = () => { setOut('test', true); runTest(); };
+
+async function runTest() {
+  if (!cm || !state.file || isJson()) return;
+  if (state.outTab !== 'test') setOut('test', true);
+  state.testArgs = $('#tArgs')?.value || state.testArgs || '';
+  const command = $('#tCmd')?.value;
+  $('#tResult').innerHTML = '<div class="note">Running...</div>';
+  try {
+    const r = await api('POST', '/api/run', { name: state.file, content: cm.getValue(), command, args: state.testArgs });
+    state.lastTest = r.status === 422 ? { error: r.error } : r.raw;
+  } catch (e) { state.lastTest = { error: e.message }; }
+  renderOut();
+}
+
+function md(text) {
+  let s = esc(text);
+  s = s.replace(/`([^`]+)`/g, '<code class="i">$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')
+    .replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<i>$2</i>')
+    .replace(/__([^_]+)__/g, '<u>$1</u>')
+    .replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener" style="color:#00a8fc">$1</a>')
+    .replace(/&lt;@!?(\d+)&gt;/g, '<span class="mention">@user $1</span>')
+    .replace(/&lt;@&amp;(\d+)&gt;/g, '<span class="mention">@role</span>')
+    .replace(/&lt;#(\d+)&gt;/g, '<span class="mention">#channel</span>')
+    .replace(/&lt;t:(\d+)(?::\w)?&gt;/g, (_, t) => `<span class="mention">${new Date(t * 1000).toLocaleDateString()}</span>`);
+  return s;
+}
+function renderEmbed(e) {
+  const color = e.color != null ? `#${e.color.toString(16).padStart(6, '0')}` : '#1e1f22';
+  const title = e.title ? `<div class="et">${e.url ? `<a href="${esc(e.url)}" target="_blank" rel="noopener">${md(e.title)}</a>` : md(e.title)}</div>` : '';
+  return `<div class="embed" style="border-left-color:${color}">
+    <div>${e.author ? `<div class="ft" style="color:var(--text);font-weight:600">${esc(e.author.name || '')}</div>` : ''}${title}${e.description ? `<div class="ed">${md(e.description)}</div>` : ''}</div>
+    ${e.thumbnail?.url ? `<img class="thumb" src="${esc(e.thumbnail.url)}" alt="">` : ''}
+    ${e.fields?.length ? `<div class="fields">${e.fields.map((f) => `<div class="field ${f.inline ? 'in' : ''}"><b>${md(f.name)}</b><div>${md(f.value)}</div></div>`).join('')}</div>` : ''}
+    ${e.image?.url ? `<img class="img" src="${esc(e.image.url)}" alt="">` : ''}
+    ${e.footer?.text || e.timestamp ? `<div class="ft">${esc(e.footer?.text || '')}${e.footer?.text && e.timestamp ? ' • ' : ''}${e.timestamp ? new Date(e.timestamp).toLocaleString() : ''}</div>` : ''}
+  </div>`;
+}
+function renderResult(r) {
+  if (r.error) return `<div class="problem e"><span class="t">${esc(r.error)}</span></div>`;
+  const flags = [r.stopped && 'stopped early', r.ephemeral && 'only visible to the user', r.channelId && `posts in channel ${r.channelId}`].filter(Boolean);
+  const nothing = !r.content && !r.embeds.length && !r.files.length;
+  return `<div class="dmsg"><div class="av">B</div><div>
+    <div class="who">Your bot <small>${esc(r.command)} · ${r.ms} ms${flags.length ? ' · ' + esc(flags.join(', ')) : ''}</small></div>
+    ${r.content ? `<div class="txt">${md(r.content)}</div>` : ''}
+    ${nothing ? '<div class="note">The command ran but sent nothing.</div>' : ''}
+    ${r.embeds.map(renderEmbed).join('')}
+    ${r.buttons.length ? `<div class="dbtns">${r.buttons.map((b) => (b.url ? `<a class="dbtn s5" href="${esc(b.url)}" target="_blank" rel="noopener" style="text-decoration:none">${esc(b.label)} ↗</a>` : `<button class="dbtn s${b.style}" title="ID: ${esc(b.id)}" disabled>${esc(b.label)}</button>`)).join('')}</div>` : ''}
+    ${r.files.map((f) => `<details class="fileprev"><summary>${esc(f.name)} <span class="note">${(f.size / 1024).toFixed(1)} KB</span></summary><pre>${esc(f.preview)}${f.size > f.preview.length ? '\n...' : ''}</pre></details>`).join('')}
+    ${r.sent.length ? `<div class="note">${r.sent.map(esc).join('<br>')}</div>` : ''}
+  </div></div>`;
+}
+
+/* ---------- drawer on phones ---------- */
+function closeDrawer() { $('#files').classList.remove('open'); $('#scrim').classList.remove('open'); }
+$('#menuBtn').onclick = () => { $('#files').classList.add('open'); $('#scrim').classList.add('open'); };
+$('#scrim').onclick = closeDrawer;
+
+/* ---------- settings ---------- */
+let settings = [];
+async function loadSettings() {
+  settings = (await api('GET', '/api/settings')).list;
+  $('#settingsList').innerHTML = settings.map((s, i) => `
+    <div class="setting">
+      <label for="s${i}">${esc(s.key)}</label>
+      ${s.note ? `<div class="hint">${esc(s.note)}</div>` : ''}
+      <input id="s${i}" data-key="${esc(s.key)}" ${s.secret ? `type="password" placeholder="${s.isSet ? 'Set. Type here to change it.' : 'Not set yet'}" autocomplete="new-password"` : `value="${esc(s.value)}"`}>
+    </div>`).join('') || '<div class="note">No .env file yet.</div>';
+  $('#settingsNote').textContent = '';
+}
+$('#saveSettings').onclick = async () => {
+  const changes = {};
+  for (const input of $$('#settingsList input')) {
+    const s = settings.find((x) => x.key === input.dataset.key);
+    if (s.secret) { if (input.value) changes[s.key] = input.value; } else if (input.value !== s.value) changes[s.key] = input.value;
+  }
+  if (!Object.keys(changes).length) return toast('Nothing changed');
+  try {
+    const r = await api('PUT', '/api/settings', { changes });
+    if (r.restart) $('#restartBanner').classList.remove('hidden');
+    toast(r.restart ? 'Saved. Restart the bot to use the new values.' : 'Saved and working now');
+    loadSettings();
+  } catch (e) { toast(e.message); }
+};
+$('#addSetting').onclick = async () => {
+  const d = await ask({ title: 'Add a setting', html: '<label>Name<input id="asKey" placeholder="BDX_WELCOME_CHANNEL"></label><label style="display:block;margin-top:10px">Value<input id="asVal"></label><p class="note">Commands can read settings that start with BDX_ using $env[BDX_NAME].</p>', ok: 'Add' });
+  if (!d) return;
+  const key = $('#asKey').value.trim().toUpperCase().replace(/[^A-Z0-9_]/g, '_');
+  if (!key) return;
+  try { await api('PUT', '/api/settings', { changes: { [key]: $('#asVal').value } }); toast('Added'); loadSettings(); } catch (e) { toast(e.message); }
+};
+async function restart() {
+  const ok = await ask({ title: 'Restart the bot?', html: '<p>It goes offline for about 10 seconds, then comes back with the latest settings.</p>', ok: 'Restart' });
+  if (!ok) return;
+  await api('POST', '/api/restart', {}).catch(() => {});
+  toast('Restarting...', 9000);
+  $('#restartBanner').classList.add('hidden');
+  $('#dot').className = 'dot off'; $('#statusText').textContent = 'Restarting';
+  const began = Date.now();
+  const poll = setInterval(async () => {
+    try { const r = await fetch('/api/status', { credentials: 'same-origin' }); if (r.ok) { clearInterval(poll); toast('Back online'); loadStatus(); } }
+    catch {}
+    if (Date.now() - began > 60000) { clearInterval(poll); toast('It is taking a while. Check the Logs tab.'); }
+  }, 2000);
+}
+$('#restartBtn').onclick = restart; $('#restartBtn2').onclick = restart;
+
+/* ---------- logs ---------- */
+let logTimer = null;
+async function loadLogs() {
+  clearInterval(logTimer);
+  const draw = async () => {
+    if ($('#v-logs').classList.contains('hidden')) return clearInterval(logTimer);
+    const list = (await api('GET', '/api/logs').catch(() => ({ list: [] }))).list || [];
+    const atBottom = $('#v-logs').scrollHeight - $('#v-logs').scrollTop - $('#v-logs').clientHeight < 60;
+    $('#logList').innerHTML = list.length ? list.map((l) => `<div class="log ${l.level}"><span class="tm">${new Date(l.t).toLocaleTimeString()}</span>${esc(l.text)}</div>`).join('') : '<div class="note">Nothing yet.</div>';
+    if (atBottom) $('#v-logs').scrollTop = $('#v-logs').scrollHeight;
+  };
+  await draw(); $('#v-logs').scrollTop = $('#v-logs').scrollHeight;
+  logTimer = setInterval(draw, 3000);
+}
+
+/* ---------- functions ---------- */
+function renderFunctions() {
+  const q = $('#fnSearch').value.trim().toLowerCase().replace(/^\$/, '');
+  const list = state.functions.filter((f) => !q || f.name.toLowerCase().includes(q) || f.usage.toLowerCase().includes(q));
+  $('#fnList').innerHTML = list.map((f) => `<div class="fn" data-name="${esc(f.name)}"><b>$${esc(f.name)}</b><span class="u">${esc(f.usage)}</span></div>`).join('') || '<div class="note">No match.</div>';
+  $$('.fn').forEach((el) => (el.onclick = () => {
+    const f = state.functions.find((x) => x.name === el.dataset.name);
+    if (!cm || !state.file) return toast('Open a file first');
+    show('commands');
+    const insert = f.usage.includes('[') ? `$${f.name}[]` : `$${f.name}`;
+    cm.replaceSelection(insert);
+    if (insert.endsWith('[]')) cm.setCursor({ line: cm.getCursor().line, ch: cm.getCursor().ch - 1 });
+    cm.focus(); toast(f.usage, 4000);
+  }));
+}
+$('#fnSearch').oninput = renderFunctions;
+
+/* ---------- start ---------- */
+async function start() {
+  try { await api('GET', '/api/status'); } catch { return; }
+  $('#login').classList.add('hidden'); $('#app').classList.remove('hidden');
+  state.functions = (await api('GET', '/api/functions')).list;
+  await loadFiles(); loadStatus(); setInterval(loadStatus, 15000);
+  let view = 'commands'; let file = null;
+  try { view = localStorage.getItem('bdx.view') || 'commands'; file = localStorage.getItem('bdx.file'); } catch {}
+  if (file && state.files.some((f) => f.name === file)) await openFile(file);
+  show(view);
+  renderOut();
+}
+if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+start();
+</script>
+</body>
+</html>

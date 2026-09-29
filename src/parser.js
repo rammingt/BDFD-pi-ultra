@@ -10,7 +10,31 @@ const NAME_CHAR = /[a-zA-Z0-9]/;
 function parse(src, registry) {
   const pos = { i: 0 };
   const nodes = parseSeq(src, pos, registry, false);
-  return buildBlocks(nodes);
+  return buildBlocks(markSoftNewlines(nodes));
+}
+
+// A line break after a line holding only functions becomes { t: 'nl' }. The
+// interpreter drops it when those functions printed nothing, so code like
+//   $title[Hi]
+//   $color[ff0000]
+//   Hello
+// sends "Hello", not two blank lines and then "Hello".
+function markSoftNewlines(nodes) {
+  const out = [];
+  let hasCall = false; let hasText = false;
+  for (const n of nodes) {
+    if (n.t !== 'text') { out.push(n); hasCall = true; continue; }
+    const parts = n.v.split('\n');
+    parts.forEach((part, k) => {
+      if (k > 0) {
+        if (hasCall && !hasText) out.push({ t: 'nl' });
+        else out.push({ t: 'text', v: '\n' });
+        hasCall = false; hasText = false;
+      }
+      if (part) { out.push({ t: 'text', v: part }); if (part.trim()) hasText = true; }
+    });
+  }
+  return mergeText(out);
 }
 
 // Parse until end (or until ']' / ';' at depth 0 when inArgs).

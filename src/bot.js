@@ -16,7 +16,7 @@ const toUser = (u) => u && ({ id: u.id, username: u.username, displayName: u.glo
 const toGuild = (g) => g && ({ id: g.id, name: g.name, memberCount: g.memberCount, icon: g.iconURL({ size: 1024 }) || '' });
 const toChannel = (c) => c && ({ id: c.id, name: c.name || 'DM' });
 
-async function startBot({ token, commandsDir, dataFile, prefix, watch = true }) {
+async function startBot({ token, commandsDir, dataFile, prefix, watch = true, beforeLogin }) {
   const engine = new Engine({ commandsDir, dataFile, prefix });
   const first = engine.reload();
   first.errors.forEach((e) => console.error(`[load] ${e}`));
@@ -176,6 +176,7 @@ async function startBot({ token, commandsDir, dataFile, prefix, watch = true }) 
   process.on('SIGINT', shutdown);
   process.on('SIGTERM', shutdown);
 
+  if (beforeLogin) beforeLogin({ client, engine });
   await client.login(token);
   return { client, engine };
 }

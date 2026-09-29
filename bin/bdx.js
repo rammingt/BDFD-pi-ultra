@@ -42,9 +42,28 @@ async function main() {
   const [cmd, ...rest] = process.argv.slice(2);
   switch (cmd) {
     case 'start': {
-      if (!process.env.DISCORD_TOKEN) { console.error('Set DISCORD_TOKEN in .env (see .env.example)'); process.exit(1); }
       const { startBot } = require('../src/bot');
-      await startBot({ token: process.env.DISCORD_TOKEN, commandsDir, dataFile, prefix });
+      const { startPanel } = require('../src/panel');
+      const panel = ({ client, engine }) => startPanel({
+        engine, client, commandsDir, envFile,
+        password: process.env.PANEL_PASSWORD,
+        port: Number(process.env.PANEL_PORT) || 3200,
+        host: process.env.PANEL_HOST || '0.0.0.0',
+      });
+      if (!process.env.DISCORD_TOKEN) {
+        // No token yet: still open the panel so it can be set from the browser.
+        console.error('Set DISCORD_TOKEN in .env (see .env.example), or in the web panel Settings');
+        const engine = new Engine({ commandsDir, dataFile, prefix });
+        if (!panel({ client: null, engine })) process.exit(1);
+        break;
+      }
+      try {
+        await startBot({ token: process.env.DISCORD_TOKEN, commandsDir, dataFile, prefix, beforeLogin: panel });
+      } catch (e) {
+        // Wrong token and the like. Keep the panel up so it can be fixed from there.
+        console.error(`Could not log in to Discord: ${e.message}`);
+        if (!process.env.PANEL_PASSWORD) process.exit(1);
+      }
       break;
     }
     case 'check': {
