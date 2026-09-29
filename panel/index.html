@@ -145,12 +145,12 @@ code.i { background: #2b2d31; padding: 1px 4px; border-radius: 4px; font-family:
 .dbtns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 .dbtn { border-radius: 4px; padding: 6px 14px; border: none; color: #fff; font-weight: 500; font-size: 13.5px; }
 .dbtn.s1 { background: #5865f2; } .dbtn.s2 { background: #4e5058; } .dbtn.s3 { background: #248046; } .dbtn.s4 { background: #da373c; } .dbtn.s5 { background: #4e5058; }
-.h1 { display: block; font-size: 20px; font-weight: 700; margin: 2px 0; }
+.h1 { display: block; font-size: 24px; font-weight: 700; margin: 2px 0; }
 .h2 { display: block; font-size: 17px; font-weight: 700; margin: 2px 0; }
 .h3 { display: block; font-size: 15px; font-weight: 700; margin: 2px 0; }
 .hq { display: block; border-left: 4px solid #4e5058; padding-left: 10px; }
 .hs { display: block; font-size: 12px; color: var(--dim); }
-.v2box { margin-top: 6px; max-width: 560px; background: #2b2d31; border: 1px solid #34363c; border-left: 4px solid #3f4147; border-radius: 8px; padding: 12px 14px; display: grid; gap: 8px; }
+.v2box { margin-top: 6px; max-width: 560px; background: #2b2d31; border: 1px solid #3a3c42; border-radius: 10px; padding: 12px 14px; display: grid; gap: 8px; }
 .v2box.spoil { filter: blur(6px); }
 .v2sec { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: start; }
 .v2thumb { width: 84px; height: 84px; border-radius: 6px; object-fit: cover; }
@@ -615,7 +615,7 @@ function renderButton(b) {
 function renderV2(list) {
   return (list || []).map((c) => {
     switch (c.type) {
-      case 17: return `<div class="v2box${c.spoiler ? ' spoil' : ''}" style="border-left-color:${c.accent_color != null ? `#${c.accent_color.toString(16).padStart(6, '0')}` : '#3f4147'}">${renderV2(c.components)}</div>`;
+      case 17: return `<div class="v2box${c.spoiler ? ' spoil' : ''}"${c.accent_color != null ? ` style="border-left:4px solid #${c.accent_color.toString(16).padStart(6, '0')}"` : ''}>${renderV2(c.components)}</div>`;
       case 10: return `<div class="txt">${md(c.content)}</div>`;
       case 9: return `<div class="v2sec"><div>${renderV2(c.components)}</div>${c.accessory?.type === 11 ? `<img class="v2thumb" src="${esc(c.accessory.media.url)}" alt="">` : c.accessory?.type === 2 ? renderButton(c.accessory) : ''}</div>`;
       case 14: return `<hr class="v2sep${c.divider === false ? ' nodiv' : ''}${c.spacing === 2 ? ' lg' : ''}">`;

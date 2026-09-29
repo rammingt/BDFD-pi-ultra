@@ -80,31 +80,31 @@ $attachFile[verify_$message[1].json;$jsonPretty]
 ---
 @name verifyreport
 @type snippet
-$c[The report, one card per check. Used by !check and the join check, after a $httpGet to the Verify API. The card text comes ready made from Verify, under bdfd.cards. A card gets a red edge when its check flagged the user.]
-$addContainer[profile;$httpResult[bdfd;color]]
+$c[The report, one card per check. Used by !check and the join check, after a $httpGet to the Verify API. The card text comes ready made from Verify, under bdfd.cards. Plain cards with no colored edge.]
+$addContainer[profile]
 $addSection[$httpResult[bdfd;cards;profile];$httpResult[bdfd;headshot]]
 $addSeparator
 $addTextDisplay[$httpResult[bdfd;cards;result]]
 
-$addContainer[rovuew;$httpResult[bdfd;cards;rovuew_color]]
+$addContainer[rovuew]
 $addTextDisplay[## RoVuew flags]
 $addSeparator
 $addTextDisplay[$httpResult[bdfd;cards;rovuew]]
 
-$addContainer[tase;$httpResult[bdfd;cards;tase_color]]
+$addContainer[tase]
 $addTextDisplay[## TASE flags]
 $addSeparator
 $addTextDisplay[$httpResult[bdfd;cards;tase]]
 
 $if[$httpResult[bdfd;cards;show_serversweep]==yes]
-$addContainer[serversweep;$httpResult[bdfd;cards;serversweep_color]]
+$addContainer[serversweep]
 $addTextDisplay[## Server Sweep flags]
 $addSeparator
 $addTextDisplay[$httpResult[bdfd;cards;serversweep]]
 $endif
 
 $if[$httpResult[bdfd;cards;show_xtracker]==yes]
-$addContainer[xtracker;$httpResult[bdfd;cards;xtracker_color]]
+$addContainer[xtracker]
 $addTextDisplay[## XTracker]
 $addSeparator
 $addTextDisplay[$httpResult[bdfd;cards;xtracker]]
