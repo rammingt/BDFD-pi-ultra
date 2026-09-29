@@ -86,6 +86,11 @@ $addSection[$httpResult[bdfd;cards;profile];$httpResult[bdfd;headshot]]
 $addSeparator
 $addTextDisplay[$httpResult[bdfd;cards;result]]
 
+$addContainer[discord]
+$addTextDisplay[## Discord]
+$addSeparator
+$addSection[$httpResult[bdfd;cards;discord];$httpResult[bdfd;cards;discord_avatar]]
+
 $addContainer[rovuew]
 $addTextDisplay[## RoVuew flags]
 $addSeparator

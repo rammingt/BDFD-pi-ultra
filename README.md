@@ -125,7 +125,7 @@ In cooldown error messages, `%time%` is replaced with the time left. Use `\;`, `
 | Part | Who | What it does |
 |---|---|---|
 | `!verify` | Everyone | Checks their own account, gives the verified role if they pass, and logs the result for staff |
-| `!check @user` | Staff with Manage Roles | Full report with avatar, account age, RoVuew, background checks and worn items |
+| `!check @user` | Staff with Manage Roles | Full report: Roblox profile, Discord account and server info, RoVuew, TASE, Server Sweep, XTracker and worn items, one card each |
 | Join check | Automatic | Checks everyone who joins, posts the report in the log channel, and gives the role if they pass |
 | Full results button | Staff with Manage Roles | Under every report. DMs RoVuew's whole reply and Verify's whole reply as `.json` files to whoever pressed it. If their DMs are closed, it shows them there instead |
 
