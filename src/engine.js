@@ -81,6 +81,7 @@ class Engine {
       messageId: env.messageId || '',
       mentions: env.mentions || [],
       customId: env.customId || '',
+      selectValues: env.selectValues || [],
       discord: env.discord || null,
       send: env.send || (async () => ''),
       out: { embeds: [], components: [], reactions: [], files: [], layout: [], container: null, containers: {}, reply: false, ephemeral: false, deleteCommand: false, dm: false, channelId: null, allowMentions: false },
@@ -99,7 +100,7 @@ class Engine {
     const embeds = ctx.out.embeds.filter(Boolean).map((e) => (e.fields.length ? e : { ...e, fields: undefined }));
     // containers with nothing in them are rejected by Discord, so drop them
     const layout = ctx.out.layout.filter((c) => c.type !== 17 || c.components.length);
-    const { container, containers, ...out } = ctx.out;
+    const { container, containers, menu, ...out } = ctx.out;
     return { ...out, layout, embeds, content: content.trim(), stopped, ms: Date.now() - ctx.startedAt };
   }
 }

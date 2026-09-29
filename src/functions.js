@@ -37,6 +37,17 @@ function embed(ctx) {
   return ctx.out.embeds[0];
 }
 
+// "a.b.0.c" -> value inside ctx.json (or any object)
+function dig(obj, pathText) {
+  let v = obj;
+  for (const k of String(pathText || '').split('.').filter(Boolean)) v = v == null ? undefined : v[k];
+  return v;
+}
+const show = (v) => (v == null ? '' : typeof v === 'object' ? JSON.stringify(v) : String(v));
+
+// Results kept for later, like a "View full list" button: token -> { data, owner, timer }
+const stash = new Map();
+
 // Where a container piece goes: the named container, the open one, or the message itself.
 function place(ctx, id) {
   if (id) {
@@ -408,6 +419,55 @@ const F = {
     list[list.length - 1].components.push(b);
     return '';
   } },
+  // Dropdown menus. Picks go to a "@type select" command named like the menu's ID
+  // (before any colon), which reads them with $selectedValues.
+  addSelectMenu: { fn(ctx, a) {
+    const [id, placeholder] = need(a, 1, '$addSelectMenu[customID;placeholder?;min?;max?]');
+    const min = a[2] ? Math.max(0, num(a[2], 'min')) : 1;
+    const max = a[3] ? Math.max(min, num(a[3], 'max')) : 1;
+    const menu = { type: 3, custom_id: id, options: [], min_values: min, max_values: max };
+    if (placeholder) menu.placeholder = placeholder.slice(0, 150);
+    const list = ctx.out.container ? ctx.out.container.components : ctx.out.components;
+    list.push({ type: 1, components: [menu] });
+    ctx.out.menu = { menu, max };
+    return '';
+  } },
+  addSelectOption: { fn(ctx, a) {
+    const [label, value] = need(a, 2, '$addSelectOption[label;value;description?;emoji?;default?]');
+    const m = ctx.out.menu;
+    if (!m) fail('add a menu first with $addSelectMenu');
+    if (m.menu.options.length >= 25) return '';
+    const opt = { label: label.slice(0, 100), value: value.slice(0, 100) };
+    if (a[2]) opt.description = a[2].slice(0, 100);
+    if (a[3]) opt.emoji = /^\d+$/.test(a[3]) ? { id: a[3] } : { name: a[3] };
+    if (bool(a[4])) opt.default = true;
+    m.menu.options.push(opt);
+    m.menu.max_values = Math.min(m.max, m.menu.options.length);
+    m.menu.min_values = Math.min(m.menu.min_values, m.menu.max_values);
+    return '';
+  } },
+  // Fills the last menu from a list, with the same {field} templates as $jsonList (up to 25).
+  addSelectOptions: { fn(ctx, a) {
+    const [pathText, labelT, valueT] = need(a, 3, '$addSelectOptions[path;label template;value template;description template?]');
+    const m = ctx.out.menu;
+    if (!m) fail('add a menu first with $addSelectMenu');
+    const items = dig(ctx.json, pathText);
+    if (!Array.isArray(items)) return '';
+    const fill = (t, item, i) => t.replace(/\{([#@]|[\w.]+)(?:\|([^}]*))?\}/g, (x, key, fb) => {
+      const text = show(key === '#' ? i + 1 : key === '@' ? item : dig(item, key));
+      return text === '' && fb !== undefined ? fb : text;
+    });
+    for (const [i, item] of items.entries()) {
+      if (m.menu.options.length >= 25) break;
+      const opt = { label: fill(labelT, item, i).slice(0, 100) || 'Item', value: fill(valueT, item, i).slice(0, 100) };
+      if (a[3]) opt.description = fill(a[3], item, i).slice(0, 100);
+      m.menu.options.push(opt);
+    }
+    m.menu.max_values = Math.max(1, Math.min(m.max, m.menu.options.length));
+    m.menu.min_values = Math.min(m.menu.min_values, m.menu.max_values);
+    return '';
+  } },
+  selectedValues: { fn: (ctx, a) => ctx.selectValues.join(arg(a, 0, ',')) },
   sendMessage: { async fn(ctx, a) {
     need(a, 1, '$sendMessage[text;returnID?]');
     const id = await ctx.send(null, { content: a[0] });
@@ -469,6 +529,44 @@ const F = {
     o[a[a.length - 2]] = a[a.length - 1]; return '';
   } },
   jsonStringify: { fn: (ctx) => JSON.stringify(ctx.json ?? null) },
+  // Loops for BDScript: fills the template once per item in a list.
+  // {name} reads a field, {flag.url} a nested one, {#} is the position, {@} the item itself,
+  // and {field|fallback} uses the fallback when the field is empty.
+  jsonList: { fn(ctx, a) {
+    const [pathText, template] = need(a, 2, '$jsonList[path;template;limit?;separator?;more text?]');
+    const items = dig(ctx.json, pathText);
+    if (!Array.isArray(items) || !items.length) return '';
+    const limit = a[2] ? Math.max(1, num(a[2], 'limit')) : items.length;
+    const sep = a[3] !== undefined && a[3] !== '' ? a[3].replace(/\\n/g, '\n') : '\n';
+    const lines = items.slice(0, limit).map((item, i) => template.replace(/\{([#@]|[\w.]+)(?:\|([^}]*))?\}/g, (m, key, fallback) => {
+      const v = key === '#' ? i + 1 : key === '@' ? item : dig(item, key);
+      const text = show(v);
+      return text === '' && fallback !== undefined ? fallback : text;
+    }));
+    if (items.length > limit && a[4]) lines.push(a[4].replace(/\{n\}/g, String(items.length - limit)));
+    return lines.join(sep);
+  } },
+  jsonCount: { fn(ctx, a) {
+    const v = dig(ctx.json, arg(a, 0));
+    return String(Array.isArray(v) ? v.length : v && typeof v === 'object' ? Object.keys(v).length : 0);
+  } },
+  // Keep the current JSON for later (default 15 minutes) and get a token for a button's ID.
+  jsonStash: { fn(ctx, a) {
+    const ms = parseDuration(arg(a, 0, '15m'));
+    const token = require('crypto').randomUUID().replace(/-/g, '').slice(0, 20);
+    const timer = setTimeout(() => stash.delete(token), ms);
+    timer.unref?.();
+    stash.set(token, { data: ctx.json, owner: ctx.author?.id });
+    return token;
+  } },
+  // Load a stashed result back. Returns ok, expired, or notyours (with ownerOnly = yes).
+  jsonUnstash: { fn(ctx, a) {
+    const entry = stash.get(need(a, 1, '$jsonUnstash[token;ownerOnly?]')[0].trim());
+    if (!entry) return 'expired';
+    if (bool(a[1]) && entry.owner !== ctx.author?.id) return 'notyours';
+    ctx.json = entry.data;
+    return 'ok';
+  } },
   jsonPretty: { fn(ctx, a) {
     let v = ctx.json;
     for (const k of a || []) v = v == null ? undefined : v[k];
@@ -512,6 +610,9 @@ function permName(p) {
     banmembers: 'BanMembers', kick: 'KickMembers', kickmembers: 'KickMembers', moderatemembers: 'ModerateMembers', timeout: 'ModerateMembers' };
   return map[p.toLowerCase().replace(/[\s_]/g, '')] || p;
 }
+
+// RoVuew: inventory checks, the flag list, catalog search and share links ($rv...)
+Object.assign(F, require('./rovuew/bdx')({ need, fail, arg, num }));
 
 function buildRegistry(extra = {}) {
   const reg = new Map();

@@ -173,3 +173,36 @@ test('containers', async () => {
   assert.match((await run('$addTextDisplay[x;nope]')).content, /no container called "nope"/);
   assert.equal((await run('$addSection[Just text]')).layout[0].type, 10); // no picture: plain text block
 });
+
+test('$jsonList, $jsonCount, $jsonStash and menus', async () => {
+  const json = '{"items":[{"n":"a","s":1,"u":{"x":"X"}},{"n":"b","s":2}],"o":{"k":1}}';
+  const list = (t) => run(`$jsonParse[${json}]${t}`);
+  assert.equal((await list('$jsonList[items;{#}. {n} {s} {u.x|none}]')).content, '1. a 1 X\n2. b 2 none');
+  assert.equal((await list('$jsonList[items;{n};1;;and {n} more]')).content, 'a\nand 1 more');
+  assert.equal((await list('$jsonList[items;{n};;, ]')).content, 'a, b');
+  assert.equal((await list('$jsonCount[items] $jsonCount[o] $jsonCount[nope]')).content, '2 1 0');
+
+  const token = (await list('$jsonStash')).content;
+  assert.match(token, /^[a-f0-9]{20}$/);
+  assert.equal((await run(`$jsonUnstash[${token};yes] $json[items;1;n]`)).content, 'ok b');
+  const other = await engine.execute({ name: 't', ast: parse(`$jsonUnstash[${token};yes]`, engine.registry) }, { author: { id: '2' }, args: [] });
+  assert.equal(other.content, 'notyours');
+  assert.equal((await run('$jsonUnstash[nope]')).content, 'expired');
+
+  const m = await list('$addSelectMenu[pick:1;Pick;1;10]$addSelectOptions[items;{n};{s};score {s}]$addSelectOption[c;3]');
+  const menu = m.components[0].components[0];
+  assert.deepEqual(menu.options.map((o) => o.value), ['1', '2', '3']);
+  assert.equal(menu.max_values, 3); // never more than there are options
+  assert.equal(menu.options[0].description, 'score 1');
+  const picked = await engine.execute({ name: 't', ast: parse('$selectedValues[+]', engine.registry) }, { author, args: [], selectValues: ['1', '3'] });
+  assert.equal(picked.content, '1+3');
+});
+
+test('slash subcommands and option choices load', () => {
+  const { parseCommandFile } = require('../src/loader');
+  const [c] = parseCommandFile('@name flag add\n@type slash\n@parent Manage flags\n@option type:string:Kind::badge=Badge|asset\nhi', 'x.bdx', engine.registry);
+  assert.equal(c.name, 'flag add');
+  assert.equal(c.parent, 'Manage flags');
+  assert.deepEqual(c.options[0].choices, [{ value: 'badge', name: 'Badge' }, { value: 'asset', name: 'asset' }]);
+  assert.equal(c.options[0].required, false);
+});

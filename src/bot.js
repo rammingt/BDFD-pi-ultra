@@ -132,10 +132,13 @@ async function startBot({ token, commandsDir, dataFile, prefix, watch = true, be
   client.on(Events.InteractionCreate, (i) => runSafe('interaction', async () => {
     let cmd; let extra = {};
     if (i.isChatInputCommand()) {
-      cmd = engine.ofType('slash').concat(engine.ofType('both')).find((c) => c.name.toLowerCase() === i.commandName);
+      // "/flag add" is the command named "flag add"
+      const sub = i.options.getSubcommand(false);
+      const fullName = sub ? `${i.commandName} ${sub}` : i.commandName;
+      cmd = engine.ofType('slash').concat(engine.ofType('both')).find((c) => c.name.toLowerCase().split(/\s+/).join(' ') === fullName);
       const options = {};
       const users = new Map();
-      for (const o of i.options.data) {
+      for (const o of sub ? i.options.data[0].options || [] : i.options.data) {
         options[o.name] = String(o.user?.id ?? o.channel?.id ?? o.role?.id ?? o.value ?? '');
         if (o.user) users.set(o.user.id, toUser(o.user));
       }
@@ -144,6 +147,10 @@ async function startBot({ token, commandsDir, dataFile, prefix, watch = true, be
       // @name of a button command is matched against the button's custom ID (prefix match, so "vote" handles "vote:123")
       cmd = engine.ofType('button').find((c) => i.customId === c.name || i.customId.startsWith(`${c.name}:`));
       extra = { customId: i.customId, args: i.customId.split(':').slice(1) };
+    } else if (i.isStringSelectMenu()) {
+      // Same matching as buttons; the picked values are read with $selectedValues
+      cmd = engine.ofType('select').find((c) => i.customId === c.name || i.customId.startsWith(`${c.name}:`));
+      extra = { customId: i.customId, args: i.customId.split(':').slice(1), selectValues: i.values };
     }
     if (!cmd) return;
     // Discord drops an interaction nobody answers within 3 seconds. If the command
@@ -186,10 +193,29 @@ async function startBot({ token, commandsDir, dataFile, prefix, watch = true, be
   client.on(Events.GuildMemberRemove, memberEvent('leave'));
 
   async function registerSlash() {
-    const defs = engine.ofType('slash').concat(engine.ofType('both')).map((c) => ({
-      name: c.name.toLowerCase(), description: c.description,
-      options: c.options.map((o) => ({ name: o.name, description: o.description, required: o.required, type: OPTION_TYPES[o.type] ?? OPTION_TYPES.string })),
-    }));
+    const optionDef = (o) => {
+      const type = OPTION_TYPES[o.type] ?? OPTION_TYPES.string;
+      const numeric = type === OPTION_TYPES.integer || type === OPTION_TYPES.number;
+      return {
+        name: o.name, description: o.description, required: o.required, type,
+        ...(o.choices?.length ? { choices: o.choices.slice(0, 25).map((ch) => ({ name: ch.name, value: numeric ? Number(ch.value) : ch.value })) } : {}),
+      };
+    };
+    // Required options have to come first, or Discord refuses the command.
+    const sortOptions = (opts) => [...opts].sort((a, b) => b.required - a.required).map(optionDef);
+    const defs = [];
+    const groups = new Map();
+    for (const c of engine.ofType('slash').concat(engine.ofType('both'))) {
+      const [parent, sub] = c.name.toLowerCase().split(/\s+/);
+      if (!sub) { defs.push({ name: parent, description: c.description, options: sortOptions(c.options) }); continue; }
+      if (!groups.has(parent)) {
+        const g = { name: parent, description: c.parent || `${parent} commands`, options: [] };
+        groups.set(parent, g); defs.push(g);
+      }
+      const g = groups.get(parent);
+      if (c.parent) g.description = c.parent;
+      g.options.push({ name: sub, description: c.description, type: 1, options: sortOptions(c.options) });
+    }
     await client.application.commands.set(defs);
     console.log(`[bdx] registered ${defs.length} slash command(s)`);
   }

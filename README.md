@@ -21,6 +21,25 @@ journalctl -u bdx -f            # logs
 ```
 In the Discord Developer Portal enable the **Message Content** and **Server Members** intents.
 
+## RoVuew
+
+`commands/rovuew.bdx` is the RoVuew bot, rebuilt on BDX. The checks, the flag list, the automatic name scan, catalog search and share links are RoVuew's own code (in `src/rovuew/`), so they behave exactly the same. The commands are ordinary BDX you can edit in the panel.
+
+| Command | What it does |
+|---|---|
+| `/check`, `/checkclothes`, `/checkbadges` | Checks accessories, clothing or badges against the flag list, plus the automatic name scan |
+| `/fullcheck user discord?` | All three at once, plus XTracker, Server Sweep and TASE |
+| `/searchcatalog` | Searches the catalog and lets you add results to the flag list from a menu (admins) |
+| `/resolvelink` | Turns a share link into an asset ID, name and link |
+| `/flag add`, `/flag remove`, `/flag list` | The flag list (adding and removing needs an admin) |
+| `/autoflag add`, `/autoflag remove`, `/autoflag list` | Custom keywords for the automatic name scan (admins) |
+
+Admins are people with Manage Server, the `ROVUEW_ADMIN_ROLE_ID` role, or an ID in `ROVUEW_ACCEPTED_USERS`. Every "View full list (JSON)" button DMs the file to whoever ran the command.
+
+BDX also runs RoVuew's HTTP API (`/check`, `/checkclothes`, `/checkbadges`, `/fullcheck`, `/resolvelink`) on `ROVUEW_API_PORT` when `ROVUEW_API_KEYS` is set, so Verify keeps working. Stop the old RoVuew first, since both want the same port.
+
+**Moving over from the old RoVuew:** copy its `data` folder (`flags.json` and `keywords.json`) into `data/rovuew`, and copy `ROBLOX_API_KEY`, `SERVERSWEEP_API_KEY` and `XTRACKER_API_KEY` from its `.env`. Its `API_KEYS` becomes `ROVUEW_API_KEYS`, `PORT` becomes `ROVUEW_API_PORT`, `ADMIN_ROLE_ID` becomes `ROVUEW_ADMIN_ROLE_ID` and `ACCEPTED_USER` becomes `ROVUEW_ACCEPTED_USERS`.
+
 ## Web panel
 
 Edit commands and settings from a browser or your phone instead of the terminal.
@@ -64,7 +83,9 @@ Several commands per file? Separate them with a `---` line.
 | `@type prefix` | `prefix`, `slash`, `both`, `button`, `join`, `leave`, `ready`, `always` (every message), `interval`, `snippet` (shared code for `$include`) |
 | `@aliases a, b` | Extra triggers |
 | `@description ...` | Slash command description |
-| `@option name:type:description:required` | Slash option (`string`, `integer`, `number`, `boolean`, `user`, `channel`, `role`) — read it with `$message[name]` |
+| `@option name:type:description:required:choices` | Slash option (`string`, `integer`, `number`, `boolean`, `user`, `channel`, `role`), read it with `$message[name]`. Choices look like `badge=Badge\|accessory=Accessory` |
+| `@name flag add` | A space makes a slash subcommand: `/flag add` |
+| `@parent Manage flags` | Description of the `/flag` group (optional) |
 | `@every 1h` | For `@type interval` (use `$useChannel[id]` to choose where it posts) |
 
 **Buttons:** `$addButton[no;vote:yes;Yes;success]` + a command with `@type button` and `@name vote` handles every button whose ID is `vote` or starts with `vote:`. `$message[1]` is the part after the colon.
@@ -113,6 +134,10 @@ npm test
 - **Moderation:** `$ban $unban $kick $timeout $giveRole $takeRole $clear`
 - **JSON/web:** `$jsonParse $json $jsonPretty $jsonSet $jsonStringify $httpAddHeader $httpGet $httpStatus $httpResult`
 - **Files:** `$attachFile[name;content;base64?]` sends a file with the reply (up to 10). Add `base64` for pictures from an API, then show one in a card with `$addMediaGallery[attachment://name.png]`
+- **Lists:** `$jsonList[path;template;limit?;separator?;more text?]` repeats a template for every item in a list: `{name}` reads a field, `{flag.url}` a nested one, `{#}` is the position, `{name|fallback}` fills in when a field is empty. `$jsonCount[path]` counts a list
+- **Saving for later:** `$jsonStash[time?]` keeps the current JSON (15 minutes by default) and returns a token to put in a button's ID. `$jsonUnstash[token;ownerOnly?]` loads it back and returns `ok`, `expired` or `notyours`
+- **Menus:** `$addSelectMenu[customID;placeholder?;min?;max?]`, then `$addSelectOption[label;value;description?]` or `$addSelectOptions[path;label template;value template;description template?]` to fill it from a list. Picks go to a `@type select` command named like the menu, which reads them with `$selectedValues[separator?]`
+- **RoVuew:** `$rvCheck $rvCooldown $rvIsAdmin $rvFlags $rvFlagAdd $rvFlagRemove $rvKeywords $rvKeywordAdd $rvKeywordRemove $rvSearch $rvSearchAdd $rvResolveLink` (see the RoVuew section)
 - **Reuse:** `$include[name]` runs a `@type snippet` command in place, sharing variables, the HTTP result and the embed
 - **Settings:** `$env[BDX_NAME]` reads a value from `.env`. Only names starting with `BDX_` work, so a command can't print your bot token.
 

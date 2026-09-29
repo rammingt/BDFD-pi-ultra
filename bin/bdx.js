@@ -50,6 +50,13 @@ async function main() {
         port: Number(process.env.PANEL_PORT) || 3200,
         host: process.env.PANEL_HOST || '0.0.0.0',
       });
+      // RoVuew's HTTP API (what Verify calls), when keys are set for it
+      if (process.env.ROVUEW_API_KEYS) {
+        const cfg = require('../src/rovuew/config');
+        const api = require('../src/rovuew/api').createApiServer();
+        api.listen(cfg.PORT, () => console.log(`[rovuew] API listening on port ${cfg.PORT}`))
+          .on('error', (e) => console.error(`[rovuew] API could not start on port ${cfg.PORT}: ${e.message}. Is the old RoVuew still running?`));
+      }
       if (!process.env.DISCORD_TOKEN) {
         // No token yet: still open the panel so it can be set from the browser.
         console.error('Set DISCORD_TOKEN in .env (see .env.example), or in the web panel Settings');

@@ -3,12 +3,19 @@
   "version": "1.0.0",
   "description": "BDX: a fast, self-hosted, BDFD-compatible scripting language for Discord bots (runs great on a Raspberry Pi)",
   "main": "src/index.js",
-  "bin": { "bdx": "bin/bdx.js" },
+  "bin": {
+    "bdx": "bin/bdx.js"
+  },
   "scripts": {
     "start": "node bin/bdx.js start",
     "test": "node --test test/*.test.js"
   },
-  "engines": { "node": ">=18" },
-  "dependencies": { "discord.js": "^14.16.0" },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "discord.js": "^14.16.0",
+    "express": "^4.22.3"
+  },
   "license": "MIT"
 }

@@ -6,14 +6,17 @@
 //   @type prefix              prefix | slash | both | button | join | leave | ready | always | snippet
 //   @aliases p, pong
 //   @description Check the bot latency
-//   @option user:user:Who to check:required     (slash options: name:type:description[:required])
+//   @option user:user:Who to check:required     (slash options: name:type:description[:required][:choices])
+//                             choices look like  badge=Badge|accessory=Accessory
+//   @name flag add            a space makes a slash subcommand: /flag add
+//   @parent Manage flags      description for the /flag group (optional)
 //
 // Everything after the directives is BDX code.
 const fs = require('fs');
 const path = require('path');
 const { parse } = require('./parser');
 
-const TYPES = new Set(['prefix', 'slash', 'both', 'button', 'join', 'leave', 'ready', 'always', 'interval', 'snippet']);
+const TYPES = new Set(['prefix', 'slash', 'both', 'button', 'select', 'join', 'leave', 'ready', 'always', 'interval', 'snippet']);
 
 function parseCommandFile(text, file, registry) {
   const chunks = text.replace(/\r\n/g, '\n').split(/^---\s*$/m);
@@ -43,9 +46,13 @@ function parseCommand(chunk, fallbackName, file, registry) {
       case 'aliases': cmd.aliases = value.split(',').map((s) => s.trim()).filter(Boolean); break;
       case 'description': cmd.description = value.trim().slice(0, 100) || cmd.description; break;
       case 'every': cmd.every = value.trim(); break;
+      case 'parent': cmd.parent = value.trim().slice(0, 100); break;
       case 'option': {
-        const [name, type = 'string', description = name, req = ''] = value.split(':').map((s) => s.trim());
-        cmd.options.push({ name: name.toLowerCase(), type: type.toLowerCase(), description, required: req.toLowerCase() === 'required' });
+        const [name, type = 'string', description = name, req = '', choices = ''] = value.split(':').map((s) => s.trim());
+        cmd.options.push({
+          name: name.toLowerCase(), type: type.toLowerCase(), description, required: req.toLowerCase() === 'required',
+          choices: choices ? choices.split('|').map((c) => { const [v, label = v] = c.split('=').map((x) => x.trim()); return { value: v, name: label }; }) : [],
+        });
         break;
       }
       default: throw new Error(`${file}: unknown directive @${key}`);
