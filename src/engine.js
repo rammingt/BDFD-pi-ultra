@@ -83,7 +83,7 @@ class Engine {
       customId: env.customId || '',
       discord: env.discord || null,
       send: env.send || (async () => ''),
-      out: { embeds: [], components: [], reactions: [], files: [], reply: false, ephemeral: false, deleteCommand: false, dm: false, channelId: null, allowMentions: false },
+      out: { embeds: [], components: [], reactions: [], files: [], layout: [], container: null, containers: {}, reply: false, ephemeral: false, deleteCommand: false, dm: false, channelId: null, allowMentions: false },
     };
     let content;
     let stopped = false;
@@ -94,10 +94,13 @@ class Engine {
       content = e.userMessage;
       stopped = true;
       // a stopped command only shows its error message, not half-built embeds
-      ctx.out.embeds = []; ctx.out.components = []; ctx.out.reactions = []; ctx.out.files = [];
+      ctx.out.embeds = []; ctx.out.components = []; ctx.out.reactions = []; ctx.out.files = []; ctx.out.layout = [];
     }
     const embeds = ctx.out.embeds.filter(Boolean).map((e) => (e.fields.length ? e : { ...e, fields: undefined }));
-    return { ...ctx.out, embeds, content: content.trim(), stopped, ms: Date.now() - ctx.startedAt };
+    // containers with nothing in them are rejected by Discord, so drop them
+    const layout = ctx.out.layout.filter((c) => c.type !== 17 || c.components.length);
+    const { container, containers, ...out } = ctx.out;
+    return { ...out, layout, embeds, content: content.trim(), stopped, ms: Date.now() - ctx.startedAt };
   }
 }
 

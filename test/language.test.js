@@ -143,3 +143,31 @@ test('lines with only functions leave no blank lines', async () => {
   assert.equal((await run('Top\n\nBottom')).content, 'Top\n\nBottom'); // blank lines you write yourself stay
   assert.equal((await run('$if[1==1]\nYes\n$else\nNo\n$endif\nDone')).content, 'Yes\nDone');
 });
+
+test('containers', async () => {
+  const r = await run([
+    '$addContainer[card;ff0000]',
+    '$addSection[## Hi;https://x/a.png]',
+    '$addSeparator[no;large]',
+    '$addTextDisplay[Body]',
+    '$addButton[no;b:1;Press;primary]',
+    '$addMediaGallery[https://x/1.png;https://x/2.png]',
+    '$closeContainer',
+    '$addTextDisplay[Outside]',
+    '$addButton[no;b:2;Below;secondary]',
+    '$addContainer[empty]$closeContainer',
+  ].join('\n'));
+  assert.equal(r.content, '');
+  assert.equal(r.layout.length, 2); // the empty container is dropped
+  const [box, outside] = r.layout;
+  assert.equal(box.accent_color, 0xff0000);
+  assert.deepEqual(box.components.map((c) => c.type), [9, 14, 10, 1, 12]);
+  assert.equal(box.components[0].accessory.media.url, 'https://x/a.png');
+  assert.deepEqual(box.components[1], { type: 14, divider: false, spacing: 2 });
+  assert.equal(box.components[3].components[0].custom_id, 'b:1');
+  assert.equal(box.components[4].items.length, 2);
+  assert.deepEqual(outside, { type: 10, content: 'Outside' });
+  assert.equal(r.components[0].components[0].custom_id, 'b:2');
+  assert.match((await run('$addTextDisplay[x;nope]')).content, /no container called "nope"/);
+  assert.equal((await run('$addSection[Just text]')).layout[0].type, 10); // no picture: plain text block
+});

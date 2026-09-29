@@ -108,6 +108,7 @@ npm test
 - **Time/limits:** `$ping $executionTime $uptime $date $time $getTimestamp $cooldown $serverCooldown $globalCooldown`
 - **Users/server:** `$authorID $userID $username $displayName $userAvatar $authorAvatar $isBot $creationDate $findUser $serverName $guildID $membersCount $serverIcon $channelID $channelName $messageID $botID $hasRole $hasPerms $onlyPerms $onlyForIDs $onlyForServers`
 - **Embeds:** `$title $description $color $footer $author $addField $thumbnail $image $addTimestamp`
+- **Containers:** `$addContainer[id?;color?;spoiler?] $addTextDisplay[text;containerID?] $addSection[text;thumbnail URL?;containerID?] $addSeparator[divider yes/no?;small/large?;containerID?] $addMediaGallery[url;url...] $closeContainer`. Discord's newer message layout: a card with a colored edge, headings (`## Title`), small text (`-# note`), a picture beside text, image galleries, and buttons inside the card. Pieces go into the container you name, or the last one you opened. `$addButton` after `$addContainer` puts the button inside the card; use `$closeContainer` to put it below instead. A message that uses containers can't have embeds, and its text over 4000 characters is shortened to fit.
 - **Response:** `$reply $ephemeral $deleteCommand $dm $useChannel $allowMention $addReactions $addButton $sendMessage $channelSendMessage`
 - **Moderation:** `$ban $unban $kick $timeout $giveRole $takeRole $clear`
 - **JSON/web:** `$jsonParse $json $jsonPretty $jsonSet $jsonStringify $httpAddHeader $httpGet $httpStatus $httpResult`
@@ -128,7 +129,7 @@ In cooldown error messages, `%time%` is replaced with the time left. Use `\;`, `
 | Join check | Automatic | Checks everyone who joins, posts the report in the log channel, and gives the role if they pass |
 | Full results button | Staff with Manage Roles | Under every report. DMs RoVuew's whole reply and Verify's whole reply as `.json` files to whoever pressed it. If their DMs are closed, it shows them there instead |
 
-The report embed lives in one snippet (`verifyreport`), so `!check` and the join check always look the same.
+The report is one container card, kept in a snippet (`verifyreport`), so `!check` and the join check always look the same.
 
 Add these to `.env` and restart with `sudo systemctl restart bdx`:
 

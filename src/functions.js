@@ -37,6 +37,16 @@ function embed(ctx) {
   return ctx.out.embeds[0];
 }
 
+// Where a container piece goes: the named container, the open one, or the message itself.
+function place(ctx, id) {
+  if (id) {
+    const box = ctx.out.containers[id];
+    if (!box) fail(`no container called "${id}". Make it first with $addContainer[${id}]`);
+    return box.components;
+  }
+  return ctx.out.container ? ctx.out.container.components : ctx.out.layout;
+}
+
 function userFromArg(ctx, v) {
   const id = v ? stripId(v) : ctx.author.id;
   return ctx.users?.get(id) || (id === ctx.author.id ? ctx.author : null);
@@ -314,6 +324,47 @@ const F = {
   image: { fn(ctx, a) { embed(ctx).image = { url: arg(a, 0) }; return ''; } },
   addTimestamp: { fn(ctx) { embed(ctx).timestamp = new Date().toISOString(); return ''; } },
 
+  // ───────────── containers (Discord's newer message layout) ─────────────
+  // A message with any of these is sent in the new layout, which can't have embeds.
+  // Each one goes into the container named in its last argument, or the most
+  // recently opened container, or straight into the message if none is open.
+  addContainer: { fn(ctx, a) {
+    const id = arg(a, 0) || `container${Object.keys(ctx.out.containers).length + 1}`;
+    const box = { type: 17, components: [] };
+    const color = arg(a, 1).replace('#', '');
+    if (color) { const n = parseInt(color, 16); if (isNaN(n)) fail(`invalid hex color "${a[1]}"`); box.accent_color = n; }
+    if (bool(a?.[2])) box.spoiler = true;
+    ctx.out.containers[id] = box;
+    ctx.out.container = box;
+    ctx.out.layout.push(box);
+    return '';
+  } },
+  closeContainer: { fn(ctx) { ctx.out.container = null; return ''; } },
+  addTextDisplay: { fn(ctx, a) {
+    const text = need(a, 1, '$addTextDisplay[text;containerID?]')[0];
+    if (text.trim()) place(ctx, arg(a, 1)).push({ type: 10, content: text.slice(0, 4000) });
+    return '';
+  } },
+  addSection: { fn(ctx, a) {
+    const text = need(a, 1, '$addSection[text;thumbnail URL?;containerID?]')[0];
+    const url = arg(a, 1).trim();
+    const target = place(ctx, arg(a, 2));
+    if (!url) { if (text.trim()) target.push({ type: 10, content: text.slice(0, 4000) }); return ''; }
+    target.push({ type: 9, components: [{ type: 10, content: (text.trim() || '​').slice(0, 4000) }], accessory: { type: 11, media: { url } } });
+    return '';
+  } },
+  addSeparator: { fn(ctx, a) {
+    const divider = a?.[0] ? bool(a[0]) : true;
+    const spacing = arg(a, 1).toLowerCase() === 'large' ? 2 : 1;
+    place(ctx, arg(a, 2)).push({ type: 14, divider, spacing });
+    return '';
+  } },
+  addMediaGallery: { fn(ctx, a) {
+    const urls = need(a, 1, '$addMediaGallery[image URL;image URL...]').map((u) => u.trim()).filter(Boolean).slice(0, 10);
+    if (urls.length) place(ctx, '').push({ type: 12, items: urls.map((url) => ({ media: { url } })) });
+    return '';
+  } },
+
   // ───────────── response behaviour ─────────────
   reply: { fn(ctx) { ctx.out.reply = true; return ''; } },
   attachFile: { fn(ctx, a) {
@@ -344,12 +395,14 @@ const F = {
     const style = arg(a, 3, 'primary').toLowerCase();
     const styles = { primary: 1, secondary: 2, success: 3, danger: 4, link: 5 };
     if (!styles[style]) fail(`style must be one of ${Object.keys(styles).join(', ')}`);
-    const rows = ctx.out.components;
-    if (!rows.length || bool(a[0]) || rows[rows.length - 1].components.length >= 5) rows.push({ type: 1, components: [] });
+    // Inside an open container the button goes into the container; otherwise below the message.
+    const list = ctx.out.container ? ctx.out.container.components : ctx.out.components;
+    const last = list[list.length - 1];
+    if (!last || last.type !== 1 || bool(a[0]) || last.components.length >= 5) list.push({ type: 1, components: [] });
     const b = { type: 2, style: styles[style], label: a[2], disabled: bool(a[4]) };
     if (style === 'link') b.url = a[1]; else b.custom_id = a[1];
     if (a[5]) b.emoji = /^\d+$/.test(a[5]) ? { id: a[5] } : { name: a[5] };
-    rows[rows.length - 1].components.push(b);
+    list[list.length - 1].components.push(b);
     return '';
   } },
   sendMessage: { async fn(ctx, a) {

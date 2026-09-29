@@ -255,7 +255,7 @@ function startPanel({ engine, client, commandsDir, envFile, password, port = 320
       const r = await engine.execute(cmd, { ...testEnv(args), ...extra });
       return {
         command: cmd.name, type: cmd.type, content: r.content, embeds: r.embeds, stopped: r.stopped, ms: r.ms,
-        ephemeral: r.ephemeral, channelId: r.channelId,
+        ephemeral: r.ephemeral, channelId: r.channelId, layout: r.layout,
         buttons: r.components.flatMap((row) => row.components.map((b) => ({ label: b.label, url: b.url || null, id: b.custom_id || null, style: b.style }))),
         files: (r.files || []).map((f) => ({ name: f.name, size: Buffer.byteLength(f.content), preview: f.content.slice(0, 20000) })),
         sent,

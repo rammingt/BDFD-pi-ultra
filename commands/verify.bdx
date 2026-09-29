@@ -80,30 +80,34 @@ $attachFile[verify_$message[1].json;$jsonPretty]
 ---
 @name verifyreport
 @type snippet
-$c[The report embed. Used by !check and the join check, after a $httpGet to the Verify API.]
-$title[$httpResult[bdfd;title];$httpResult[bdfd;profile]]
-$description[$httpResult[bdfd;description]]
-$color[$httpResult[bdfd;color]]
-$if[$httpResult[bdfd;headshot]!=]
-$thumbnail[$httpResult[bdfd;headshot]]
-$endif
-$if[$httpResult[bdfd;avatar]!=]
-$image[$httpResult[bdfd;avatar]]
-$endif
-$addField[Result;**$httpResult[bdfd;status]**;yes]
-$addField[Roblox ID;`$httpResult[bdfd;roblox_id]`;yes]
-$addField[Discord;<@$httpResult[discord_id]>;yes]
-$addField[Account age;$httpResult[bdfd;age];yes]
-$addField[Friends;$httpResult[bdfd;social];yes]
-$addField[Inventory;$httpResult[bdfd;inventory];yes]
-$addField[RoVuew;$httpResult[bdfd;rovuew];no]
-$addField[Background;$httpResult[bdfd;background];no]
-$addField[Notes;$httpResult[bdfd;reasons];no]
-$addField[Wearing ($httpResult[bdfd;wearing_count]);$httpResult[bdfd;wearing];no]
+$c[The report. Used by !check and the join check, after a $httpGet to the Verify API. Built with a container, which Discord shows as one card with a colored edge.]
+$addContainer[report;$httpResult[bdfd;color]]
+$addSection[## \[$httpResult[bdfd;title]\]($httpResult[bdfd;profile])
+$httpResult[bdfd;description];$httpResult[bdfd;headshot]]
+$addSeparator
+$addTextDisplay[**Result:** $httpResult[bdfd;status]
+**Roblox ID:** `$httpResult[bdfd;roblox_id]`
+**Discord:** <@$httpResult[discord_id]>
+**Account age:** $httpResult[bdfd;age]
+**Friends:** $httpResult[bdfd;social]
+**Inventory:** $httpResult[bdfd;inventory]]
+$addSeparator
+$addTextDisplay[### RoVuew
+$httpResult[bdfd;rovuew]]
+$addTextDisplay[### Background checks
+$httpResult[bdfd;background]]
+$addTextDisplay[### Notes
+$httpResult[bdfd;reasons]]
 $if[$httpResult[bdfd;appeal]!=]
-$addField[Server Sweep appeal;$httpResult[bdfd;appeal];no]
+$addTextDisplay[**Server Sweep appeal:** $httpResult[bdfd;appeal]]
 $endif
-$footer[Verify]
-$addTimestamp
+$addSeparator
+$addTextDisplay[### Wearing ($httpResult[bdfd;wearing_count])
+$httpResult[bdfd;wearing]]
+$if[$httpResult[bdfd;avatar]!=]
+$addMediaGallery[$httpResult[bdfd;avatar]]
+$endif
+$addSeparator[no]
 $addButton[no;verifyraw:$httpResult[discord_id];Full results;secondary]
 $addButton[no;$httpResult[bdfd;profile];Roblox profile;link]
+$addTextDisplay[-# Checked <t:$getTimestamp:R>]
