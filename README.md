@@ -87,11 +87,32 @@ npm test
 - **Embeds:** `$title $description $color $footer $author $addField $thumbnail $image $addTimestamp`
 - **Response:** `$reply $ephemeral $deleteCommand $dm $useChannel $allowMention $addReactions $addButton $sendMessage $channelSendMessage`
 - **Moderation:** `$ban $unban $kick $timeout $giveRole $takeRole $clear`
-- **JSON/web:** `$jsonParse $json $jsonSet $jsonStringify $httpGet $httpResult`
+- **JSON/web:** `$jsonParse $json $jsonSet $jsonStringify $httpAddHeader $httpGet $httpStatus $httpResult`
+- **Settings:** `$env[BDX_NAME]` reads a value from `.env`. Only names starting with `BDX_` work, so a command can't print your bot token.
 
 In cooldown error messages, `%time%` is replaced with the time left. Use `\;`, `\]`, `\[`, `\$` to write those characters literally.
+
+## Roblox verification (Verify)
+
+`commands/verify.bdx` has two commands that use the Verify API running on the same Pi:
+
+| Command | Who | What it does |
+|---|---|---|
+| `!verify` | Everyone | Checks their own account and gives the verified role if they pass |
+| `!check @user` | Staff with Manage Roles | Full report with avatar, account age, RoVuew, background checks and worn items |
+
+Add these to `.env` and restart with `sudo systemctl restart bdx`:
+
+```
+BDX_VERIFY_URL=http://localhost:8080
+BDX_VERIFY_KEY=the API_KEY from ~/Verify/.env
+BDX_VERIFIED_ROLE_ID=the role to give
+```
+
+The bot's role has to sit above the verified role in your server settings, or Discord won't let it give the role. Because both run on the Pi, BDX talks to Verify directly and nothing has to be public.
 
 ## Differences from BDFD
 - Mentions are **off by default** in replies (safer); use `$allowMention` to ping.
 - Error messages name the failing function; `$suppressErrors[msg]` replaces them.
+- `$stop` throws away text written before it. Use `$stop[message]` or `$onlyIf[condition;message]` to reply and stop.
 - Scripts are sandboxed: no `eval`, loops capped, a step limit stops infinite loops.

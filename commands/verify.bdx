@@ -1,0 +1,53 @@
+@name verify
+@description Verify your Roblox account
+$reply
+$cooldown[30s;Please wait %time% before trying again.]
+$httpAddHeader[Authorization;Bearer $env[BDX_VERIFY_KEY]]
+$httpGet[$env[BDX_VERIFY_URL]/check/$authorID]
+$onlyIf[$httpStatus!=404;Your Discord isn't linked to a Roblox account yet. Verify with Bloxlink first, then run !verify again.]
+$onlyIf[$httpStatus==200;I couldn't check your account right now. Try again in a minute.]
+$if[$httpResult[status]==pass]
+$giveRole[$authorID;$env[BDX_VERIFIED_ROLE_ID]]
+You're verified, $username! Welcome in.
+$elseif[$httpResult[status]==review]
+Thanks, $username. A staff member needs to look at your account before you get access.
+$else
+Sorry, you didn't pass verification.
+$endif
+$if[$httpResult[bdfd;appeal]!=]
+If you think Server Sweep got it wrong, you can appeal here: $httpResult[bdfd;appeal]
+$endif
+---
+@name check
+@description Full Roblox background check on a member
+$reply
+$onlyPerms[manageroles;You need the Manage Roles permission to use this.]
+$argsCheck[>1;Use it like this: !check @user]
+$httpAddHeader[Authorization;Bearer $env[BDX_VERIFY_KEY]]
+$httpGet[$env[BDX_VERIFY_URL]/check/$findUser[$message]]
+$onlyIf[$httpStatus!=404;That user isn't linked with Bloxlink, or isn't in the server.]
+$onlyIf[$httpStatus==200;The check didn't go through (error $httpStatus). Try again in a minute.]
+$title[$httpResult[bdfd;title];$httpResult[bdfd;profile]]
+$description[$httpResult[bdfd;description]]
+$color[$httpResult[bdfd;color]]
+$if[$httpResult[bdfd;headshot]!=]
+$thumbnail[$httpResult[bdfd;headshot]]
+$endif
+$if[$httpResult[bdfd;avatar]!=]
+$image[$httpResult[bdfd;avatar]]
+$endif
+$addField[Result;**$httpResult[bdfd;status]**;yes]
+$addField[Roblox ID;$httpResult[bdfd;roblox_id];yes]
+$addField[Discord;<@$httpResult[discord_id]>;yes]
+$addField[Account age;$httpResult[bdfd;age];yes]
+$addField[Friends;$httpResult[bdfd;social];yes]
+$addField[Inventory;$httpResult[bdfd;inventory];yes]
+$addField[RoVuew;$httpResult[bdfd;rovuew];no]
+$addField[Background;$httpResult[bdfd;background];no]
+$addField[Notes;$httpResult[bdfd;reasons];no]
+$addField[Wearing ($httpResult[bdfd;wearing_count]);$httpResult[bdfd;wearing];no]
+$if[$httpResult[bdfd;appeal]!=]
+$addField[Server Sweep appeal;$httpResult[bdfd;appeal];no]
+$endif
+$footer[Verify]
+$addTimestamp

@@ -397,15 +397,31 @@ const F = {
     o[a[a.length - 2]] = a[a.length - 1]; return '';
   } },
   jsonStringify: { fn: (ctx) => JSON.stringify(ctx.json ?? null) },
+  httpAddHeader: { fn(ctx, a) {
+    need(a, 2, '$httpAddHeader[name;value]');
+    (ctx.httpHeaders ??= {})[a[0]] = a[1];
+    return '';
+  } },
   httpGet: { async fn(ctx, a) {
     const url = need(a, 1, '$httpGet[url]')[0];
     if (!/^https?:\/\//.test(url)) fail('url must start with http:// or https://');
-    const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
+    const headers = ctx.httpHeaders || {};
+    ctx.httpHeaders = {}; // headers apply to the next request only, like BDFD
+    const res = await fetch(url, { headers, signal: AbortSignal.timeout(30000) });
     const text = await res.text();
     ctx.vars.set('httpStatus', String(res.status));
+    ctx.json = undefined;
     try { ctx.json = JSON.parse(text); } catch { /* not JSON, fine */ }
     ctx.httpResult = text;
     return '';
+  } },
+  httpStatus: { fn: (ctx) => ctx.vars.get('httpStatus') || '' },
+  // Reads a setting from .env. Only names starting with BDX_ are allowed, so a
+  // command can never print DISCORD_TOKEN or anything else that lives there.
+  env: { fn(ctx, a) {
+    const name = need(a, 1, '$env[BDX_NAME]')[0].trim();
+    if (!name.startsWith('BDX_')) fail('only settings that start with BDX_ can be read');
+    return process.env[name] ?? '';
   } },
   httpResult: { fn: (ctx, a) => {
     if (a && a.length) { let v = ctx.json; for (const k of a) v = v?.[k]; return v == null ? '' : typeof v === 'object' ? JSON.stringify(v) : String(v); }

@@ -94,3 +94,24 @@ test('example commands load and run', async () => {
   const d = await e.execute(e.match('!daily').cmd, { author, args: [] });
   assert.match(d.content, /You got \*\*\d+\*\* coins/);
 });
+
+test('$httpAddHeader, $httpStatus and $env', async () => {
+  const http = require('http');
+  const server = http.createServer((req, res) => {
+    const ok = req.headers.authorization === 'Bearer k';
+    res.writeHead(ok ? 200 : 401, { 'content-type': 'application/json' });
+    res.end(JSON.stringify(ok ? { a: { b: 'hi' } } : { detail: 'no' }));
+  });
+  await new Promise((r) => server.listen(0, '127.0.0.1', r));
+  const url = `http://127.0.0.1:${server.address().port}/`;
+  process.env.BDX_TEST_KEY = 'k';
+  try {
+    const r = await run(`$httpAddHeader[Authorization;Bearer $env[BDX_TEST_KEY]]$httpGet[${url}]$httpStatus $httpResult[a;b]`);
+    assert.equal(r.content, '200 hi');
+    // headers only apply to the next request
+    assert.equal((await run(`$httpGet[${url}]$httpStatus`)).content, '401');
+    assert.match((await run('$env[DISCORD_TOKEN]')).content, /BDX_/);
+  } finally {
+    server.close();
+  }
+});
