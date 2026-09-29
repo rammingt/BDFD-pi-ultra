@@ -1,0 +1,15 @@
+@name coinflip
+@aliases flip
+$if[$random[0;1]==1]
+  🪙 Heads!
+$else
+  🪙 Tails!
+$endif
+---
+@name 8ball
+$argsCheck[>1;Ask me a question!]
+🎱 $randomText[Yes.;No.;Maybe.;Definitely!;Ask again later.;Very doubtful.]
+---
+@name roll
+$var[sides;$if[$isNumber[$message[1]]==true;$message[1];6]]
+🎲 You rolled a **$random[1;$var[sides]]** (d$var[sides])

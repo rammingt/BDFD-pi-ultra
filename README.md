@@ -1,0 +1,97 @@
+# BDX — BDFD Pi Ultra
+
+A **Bot Designer for Discord–style language** that runs on your own Raspberry Pi.
+If you know BDFD, you already know BDX: `$functions[with;arguments]`, `$if`, `$onlyIf`, variables, embeds, buttons.
+
+### Why it's faster than hosted BDFD
+- **Runs next to the bot.** No shared hosting queue; commands typically finish in **~1 ms** plus Discord's network time.
+- **Compiled once.** Each command is parsed into a tree when loaded (and on hot-reload), not re-parsed every message.
+- **O(1) command lookup** by trigger/alias instead of checking every command.
+- **Variables in RAM**, saved to disk in batches (atomic writes, easy on the SD card).
+- **Non-blocking `$wait`**: one sleeping command never holds up the others.
+- **Lazy `$if`/`$onlyIf`**: branches that don't run are never evaluated (no wasted API calls).
+
+## Setup on a Raspberry Pi
+```bash
+git clone <this repo> bdfd-pi-ultra && cd bdfd-pi-ultra
+./deploy/install-pi.sh          # installs Node 22, deps, and a systemd service
+nano .env                       # set DISCORD_TOKEN (and PREFIX if you want)
+sudo systemctl start bdx
+journalctl -u bdx -f            # logs
+```
+In the Discord Developer Portal enable the **Message Content** and **Server Members** intents.
+
+## Writing commands
+Put `.bdx` files anywhere in `commands/`. Files **hot-reload** on save — no restart.
+
+```
+@aliases p
+@description Check the bot latency
+$reply
+🏓 Pong! $ping ms
+```
+That's a whole command: `!ping` (or `!p`). The name defaults to the file name.
+
+Several commands per file? Separate them with a `---` line.
+
+### Directives
+| Directive | Meaning |
+|---|---|
+| `@name ping` | Command name (default: file name) |
+| `@type prefix` | `prefix`, `slash`, `both`, `button`, `join`, `leave`, `ready`, `always` (every message), `interval` |
+| `@aliases a, b` | Extra triggers |
+| `@description ...` | Slash command description |
+| `@option name:type:description:required` | Slash option (`string`, `integer`, `number`, `boolean`, `user`, `channel`, `role`) — read it with `$message[name]` |
+| `@every 1h` | For `@type interval` (use `$useChannel[id]` to choose where it posts) |
+
+**Buttons:** `$addButton[no;vote:yes;Yes;success]` + a command with `@type button` and `@name vote` handles every button whose ID is `vote` or starts with `vote:`. `$message[1]` is the part after the colon.
+
+### Conditions
+Block form (BDFD 2 style) or inline:
+```
+$if[$message[1]==hi]
+  Hello!
+$elseif[$message[1]==bye]
+  Goodbye!
+$else
+  ?
+$endif
+
+$if[$getUserVar[money]>=100;rich;poor]
+```
+Operators: `== != > < >= <=`, joined with `&&` / `||`. Numbers compare numerically.
+
+### Variables
+- `$var[name;value]` / `$var[name]` — temporary, this run only
+- `$setUserVar` / `$getUserVar`, `$setServerVar` / `$getServerVar`, `$setVar` / `$getVar` — saved
+- Defaults go in `commands/variables.json`: `{ "money": "0" }`
+- `$userLeaderboard[money;10]` for leaderboards
+
+### Useful tools
+```bash
+npx bdx check                 # validate all commands
+npx bdx run daily             # run a command locally, no Discord needed
+npx bdx run pay @someone 50
+npx bdx repl                  # try code interactively
+npx bdx functions             # list every function
+npm test
+```
+
+## Functions (overview)
+- **Control:** `$if $elseif $else $endif $onlyIf $stop $and $or $not $repeat $index $wait $c $suppressErrors`
+- **Message:** `$message $message[n] $message[>] $argsCount $argsCheck $mentioned $noMentionMessage $customID $prefix $commandName`
+- **Text:** `$replaceText $toUppercase $toLowercase $toTitleCase $length $cropText $trimSpace $checkContains $isNumber $isInteger $textSplit $splitText $getTextSplitLength $joinSplitText $repeatMessage $url`
+- **Math:** `$math $calculate $sum $sub $multi $divide $modulo $round $floor $ceil $abs $sqrt $min $max $random $randomText $randomString $numberSeparator`
+- **Time/limits:** `$ping $executionTime $uptime $date $time $getTimestamp $cooldown $serverCooldown $globalCooldown`
+- **Users/server:** `$authorID $userID $username $displayName $userAvatar $authorAvatar $isBot $creationDate $findUser $serverName $guildID $membersCount $serverIcon $channelID $channelName $messageID $botID $hasRole $hasPerms $onlyPerms $onlyForIDs $onlyForServers`
+- **Embeds:** `$title $description $color $footer $author $addField $thumbnail $image $addTimestamp`
+- **Response:** `$reply $ephemeral $deleteCommand $dm $useChannel $allowMention $addReactions $addButton $sendMessage $channelSendMessage`
+- **Moderation:** `$ban $unban $kick $timeout $giveRole $takeRole $clear`
+- **JSON/web:** `$jsonParse $json $jsonSet $jsonStringify $httpGet $httpResult`
+
+In cooldown error messages, `%time%` is replaced with the time left. Use `\;`, `\]`, `\[`, `\$` to write those characters literally.
+
+## Differences from BDFD
+- Mentions are **off by default** in replies (safer); use `$allowMention` to ping.
+- Error messages name the failing function; `$suppressErrors[msg]` replaces them.
+- Scripts are sandboxed: no `eval`, loops capped, a step limit stops infinite loops.

@@ -1,0 +1,4 @@
+@aliases p, latency
+@description Check the bot latency
+$reply
+🏓 Pong! **$ping**ms (ran in $executionTime ms)

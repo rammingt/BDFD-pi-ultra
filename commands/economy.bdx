@@ -1,0 +1,28 @@
+@name balance
+@aliases bal
+$var[user;$mentioned[1;yes]]
+$title[$username[$var[user]]'s wallet]
+$description[💰 **$numberSeparator[$getUserVar[money;$var[user]]]** coins]
+$thumbnail[$userAvatar[$var[user]]]
+$color[#f1c40f]
+---
+@name daily
+$cooldown[24h;You already claimed today! Come back in **%time%**.]
+$var[amount;$random[100;500]]
+$setUserVar[money;$sum[$getUserVar[money];$var[amount]]]
+🎁 You got **$var[amount]** coins! New balance: **$getUserVar[money]**
+---
+@name pay
+$argsCheck[>2;Usage: `$prefixpay @user amount`]
+$onlyIf[$isInteger[$message[2]]==true;Amount must be a whole number.]
+$onlyIf[$message[2]>0;Amount must be positive.]
+$onlyIf[$mentioned[1]!=;Mention someone to pay.]
+$onlyIf[$mentioned[1]!=$authorID;You can't pay yourself.]
+$onlyIf[$getUserVar[money]>=$message[2];You only have $getUserVar[money] coins.]
+$setUserVar[money;$sub[$getUserVar[money];$message[2]]]
+$setUserVar[money;$sum[$getUserVar[money;$mentioned[1]];$message[2]];$mentioned[1]]
+✅ Sent **$message[2]** coins to <@$mentioned[1]>.
+---
+@name top
+$title[🏆 Richest users]
+$description[$userLeaderboard[money;10]]

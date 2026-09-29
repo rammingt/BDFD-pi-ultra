@@ -1,0 +1,17 @@
+[Unit]
+Description=BDX Discord bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/bdfd-pi-ultra
+ExecStart=/usr/bin/node bin/bdx.js start
+Restart=always
+RestartSec=5
+# keep memory in check on small Pis
+Environment=NODE_OPTIONS=--max-old-space-size=256
+
+[Install]
+WantedBy=multi-user.target

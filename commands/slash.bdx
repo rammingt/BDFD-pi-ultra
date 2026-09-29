@@ -1,0 +1,15 @@
+@name hello
+@type slash
+@description Say hello to someone
+@option user:user:Who to greet:required
+@option message:string:Custom message
+$ephemeral
+👋 Hey <@$message[user]>! $message[message]
+---
+@name vote
+@type both
+@description Start a yes/no vote
+$title[🗳️ Vote]
+$description[$if[$message!=;$message;Do you agree?]]
+$addButton[no;vote:yes;Yes;success]
+$addButton[no;vote:no;No;danger]

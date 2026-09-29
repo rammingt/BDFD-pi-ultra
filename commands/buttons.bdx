@@ -1,0 +1,5 @@
+@name vote
+@type button
+$c[runs for any button whose ID starts with "vote:" — $message[1] is the part after the colon]
+$ephemeral
+You voted **$message[1]**! ✅

@@ -1,0 +1,11 @@
+@name kick
+$onlyPerms[kick;❌ You need the Kick Members permission.]
+$onlyIf[$mentioned[1]!=;Mention someone to kick.]
+$kick[$mentioned[1];$noMentionMessage]
+👢 Kicked <@$mentioned[1]>.
+---
+@name purge
+$onlyPerms[managemessages;❌ You need Manage Messages.]
+$argsCheck[1;Usage: `$prefixpurge 10`]
+$deleteCommand
+🧹 Deleted **$clear[$message[1]]** messages.
