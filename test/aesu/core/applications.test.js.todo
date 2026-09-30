@@ -1,0 +1,295 @@
+'use strict';
+const assert = require('node:assert/strict');
+const { describe, it } = require('node:test');
+
+process.env.APPLICATION_CHANNEL_ID = 'app-channel';
+process.env.APPLICATION_SHEET_ID = 'sheet-1';
+process.env.LOG_LEVEL = 'error';
+
+const {
+  applicantDiscordId,
+  applicantUsername,
+  applicationComponents,
+  applicationEmbed,
+  isApplicationsConfigured,
+  isDecided,
+  markDecided,
+  parseApplications,
+} = require('../../../src/aesu/sheets/applications');
+const { decodeId } = require('../../../src/aesu/discord/ids');
+const { PAGE_SIZE, applicationListReply, filterApplications, pageCount } = require('../../../src/aesu/discord/applicationList');
+
+const FORM = [
+  ['Timestamp', 'Roblox username', 'Discord', 'Why do you want to join?', 'Timezone', 'Optional extras'],
+  ['2026-09-17 14:32:01', 'aesu_tester', '<@123456789012345678>', 'I like guarding the dam.', 'Asia/Seoul', ''],
+  ['2026-09-17 15:02:44', 'other_person', '987654321098765432', 'Friends play here.', 'UTC', 'I stream.'],
+];
+
+describe('parseApplications', () => {
+  it('pairs each answer with its question and skips blanks', () => {
+    const [first, second] = parseApplications(FORM);
+
+    assert.equal(parseApplications(FORM).length, 2);
+    assert.equal(first?.rowIndex, 1);
+    assert.equal(first?.submittedAt?.toISOString().slice(0, 10), '2026-09-17');
+    assert.deepEqual(
+      first?.answers.map((a) => a.question),
+      ['Timestamp', 'Roblox username', 'Discord', 'Why do you want to join?', 'Timezone'],
+      'the unanswered optional question is left out',
+    );
+    assert.equal(second?.answers.at(-1)?.answer, 'I stream.');
+  });
+
+  it('copes with a sheet that has only a header, or nothing at all', () => {
+    assert.deepEqual(parseApplications([FORM[0]]), []);
+    assert.deepEqual(parseApplications([]), []);
+  });
+
+  it('keeps a row whose timestamp cannot be read', () => {
+    const [only] = parseApplications([FORM[0], ['not a date', 'someone', '', 'Because.', '', '']]);
+    assert.equal(only?.submittedAt, null);
+    assert.equal(only?.answers.length, 3, 'timestamp, username and the reason');
+  });
+});
+
+describe('applicationEmbed', () => {
+  it('titles the card with the Roblox name and pings the applicant', () => {
+    const [first] = parseApplications(FORM);
+    const embed = applicationEmbed(first).toJSON();
+
+    assert.equal(embed.title, 'aesu_tester');
+    assert.equal(embed.description, '<@123456789012345678>', 'a pasted mention becomes a real ping');
+    assert.equal(embed.footer?.text, 'Application #1');
+    assert.ok(embed.fields?.some((f) => f.name === 'Why do you want to join?'));
+    assert.ok(!embed.fields?.some((f) => f.name === 'Timestamp'), 'the timestamp is the embed timestamp');
+  });
+
+  it('turns a bare id into a ping too', () => {
+    const [, second] = parseApplications(FORM);
+    assert.equal(applicationEmbed(second).toJSON().description, '<@987654321098765432>');
+  });
+
+  it('stays inside the 25 field limit Discord allows', () => {
+    const header = ['Timestamp', ...Array.from({ length: 40 }, (_, i) => `Question ${i}`)];
+    const row = ['2026-09-17 10:00:00', ...Array.from({ length: 40 }, (_, i) => `Answer ${i}`)];
+    const [big] = parseApplications([header, row]);
+    const fields = applicationEmbed(big).toJSON().fields ?? [];
+
+    assert.ok(fields.length <= 25, `${fields.length} fields`);
+    assert.equal(fields.at(-1)?.name, 'More');
+  });
+
+  it('truncates an essay rather than being rejected for it', () => {
+    const [long] = parseApplications([
+      ['Timestamp', 'Essay'],
+      ['2026-09-17 10:00:00', 'x'.repeat(3000)],
+    ]);
+    const value = applicationEmbed(long).toJSON().fields?.[0]?.value ?? '';
+    assert.ok(value.length <= 1024, `${value.length} characters`);
+    assert.ok(value.endsWith('…'));
+  });
+});
+
+describe('isApplicationsConfigured', () => {
+  it('is on once a channel and a sheet are set', () => {
+    assert.equal(isApplicationsConfigured(), true);
+  });
+});
+
+describe('reading the applicant out of the answers', () => {
+  it('takes an answer that is only a username', () => {
+    const [first] = parseApplications(FORM);
+    assert.equal(applicantUsername(first), 'aesu_tester');
+    assert.equal(applicantDiscordId(first), '123456789012345678');
+  });
+
+  it('refuses a sentence, rather than guessing at a name in it', () => {
+    const [vague] = parseApplications([
+      ['Timestamp', 'Roblox username'],
+      ['2026-09-17 10:00:00', 'my main is aesu_tester but I also play on alts'],
+    ]);
+    assert.equal(applicantUsername(vague), null, 'accepting the wrong person is worse than asking');
+  });
+
+  it('strips a leading @', () => {
+    const [at] = parseApplications([
+      ['Timestamp', 'Roblox username'],
+      ['2026-09-17 10:00:00', '@aesu_tester'],
+    ]);
+    assert.equal(applicantUsername(at), 'aesu_tester');
+  });
+});
+
+describe('applicationComponents', () => {
+  it('carries everything the buttons need in the custom id', () => {
+    const [first] = parseApplications(FORM);
+    const row = applicationComponents(first)[0].toJSON();
+
+    assert.equal(row.components.length, 2);
+    const [accept, deny] = row.components.map((button) => decodeId((button).custom_id));
+
+    assert.equal(accept?.action, 'app_accept');
+    assert.equal(deny?.action, 'app_deny');
+    assert.deepEqual(accept?.args, ['1', 'aesu_tester', '123456789012345678']);
+  });
+
+  it('uses a placeholder when there is nothing to read, and stays inside 100 characters', () => {
+    const [blank] = parseApplications([
+      ['Timestamp', 'Why do you want to join?'],
+      ['2026-09-17 10:00:00', 'Because I do.'],
+    ]);
+    const row = applicationComponents(blank)[0].toJSON();
+
+    for (const button of row.components) {
+      const id = (button).custom_id;
+      assert.ok(id.length <= 100, `${id.length} characters`);
+      assert.deepEqual(decodeId(id)?.args, ['1', '-', '-']);
+    }
+  });
+});
+
+describe('marking an application decided', () => {
+  it('records who decided it and why, and says so afterwards', () => {
+    const [first] = parseApplications(FORM);
+    const card = applicationEmbed(first).toJSON();
+
+    assert.equal(isDecided(card), false);
+
+    const decided = markDecided(card, {
+      accepted: true,
+      actorId: '42',
+      note: '**aesu_tester** was accepted into the group.',
+    }).toJSON();
+
+    assert.equal(isDecided(decided), true);
+    assert.equal(decided.color, 0x57f287);
+    const field = decided.fields?.at(-1);
+    assert.equal(field?.name, 'Accepted');
+    assert.match(field?.value ?? '', /<@42>/);
+    assert.match(field?.value ?? '', /accepted into the group/);
+  });
+
+  it('turns a denied card red', () => {
+    const [first] = parseApplications(FORM);
+    const decided = markDecided(applicationEmbed(first).toJSON(), { accepted: false, actorId: '42' }).toJSON();
+
+    assert.equal(decided.color, 0xed4245);
+    assert.equal(decided.fields?.at(-1)?.name, 'Denied');
+  });
+
+  it('still fits inside 25 fields when the form is enormous', () => {
+    const questions = ['Timestamp', ...Array.from({ length: 40 }, (_, index) => `Question ${index}`)];
+    const answers = ['2026-09-17 10:00:00', ...Array.from({ length: 40 }, (_, index) => `Answer ${index}`)];
+    const [huge] = parseApplications([questions, answers]);
+
+    const decided = markDecided(applicationEmbed(huge).toJSON(), { accepted: true, actorId: '42' }).toJSON();
+    assert.ok((decided.fields ?? []).length <= 25, `${(decided.fields ?? []).length} fields`);
+  });
+});
+
+/** A sheet with `count` applications, each named after its number. */
+function manyApplications(count) {
+  const header = ['Timestamp', 'Roblox username', 'Why do you want to join?'];
+  const rows = Array.from({ length: count }, (_, index) => [
+    `2026-09-${String((index % 28) + 1).padStart(2, '0')} 10:00:00`,
+    `applicant_${index + 1}`,
+    index === 0 ? 'I like dams.' : 'Because.',
+  ]);
+  return parseApplications([header, ...rows]);
+}
+
+describe('pageCount', () => {
+  it('is one page even for nothing, and rounds up otherwise', () => {
+    assert.equal(pageCount(0), 1);
+    assert.equal(pageCount(1), 1);
+    assert.equal(pageCount(PAGE_SIZE), 1);
+    assert.equal(pageCount(PAGE_SIZE + 1), 2);
+  });
+});
+
+describe('filterApplications', () => {
+  const applications = manyApplications(3);
+
+  it('matches on the answers, however they were capitalised', () => {
+    assert.equal(filterApplications(applications, 'APPLICANT_2').length, 1);
+    assert.equal(filterApplications(applications, 'dams').length, 1);
+  });
+
+  it('leaves the list alone when there is nothing to search for', () => {
+    assert.equal(filterApplications(applications, null).length, 3);
+    assert.equal(filterApplications(applications, '   ').length, 3);
+  });
+
+  it('is empty rather than everything when nothing matches', () => {
+    assert.deepEqual(filterApplications(applications, 'nobody'), []);
+  });
+});
+
+describe('applicationListReply', () => {
+  const applications = manyApplications(23);
+
+  it('shows the newest first, a page at a time', () => {
+    const { embeds } = applicationListReply({ applications, page: 0, search: null, posted: 23 });
+    const description = embeds[0].toJSON().description ?? '';
+
+    assert.equal(description.split('\n').length, PAGE_SIZE);
+    assert.ok(description.startsWith('`#23`'), 'newest first');
+    assert.ok(description.includes('`#14`'));
+    assert.ok(!description.includes('`#13`'), 'that is the next page');
+  });
+
+  it('says where in the list you are', () => {
+    const { embeds } = applicationListReply({ applications, page: 1, search: null, posted: 23 });
+    const footer = embeds[0].toJSON().footer?.text ?? '';
+
+    assert.match(footer, /11-20 of 23/);
+    assert.match(footer, /page 2\/3/);
+  });
+
+  it('marks the ones that were never posted to the channel', () => {
+    const { embeds } = applicationListReply({ applications, page: 0, search: null, posted: 20 });
+    const description = embeds[0].toJSON().description ?? '';
+
+    assert.match(description, /`#23`.*never posted/);
+    assert.ok(!/`#20`.*never posted/.test(description), '#20 was the last one posted');
+  });
+
+  it('disables the button there is nowhere to go with', () => {
+    const first = applicationListReply({ applications, page: 0, search: null, posted: 23 });
+    const last = applicationListReply({ applications, page: 2, search: null, posted: 23 });
+
+    const buttons = (reply) =>
+      reply.components[0].toJSON().components.map((button) => (button).disabled ?? false);
+
+    assert.deepEqual(buttons(first), [true, false], 'nothing before the first page');
+    assert.deepEqual(buttons(last), [false, true], 'nothing after the last');
+  });
+
+  it('carries the page and the search in the button, so nothing has to be remembered', () => {
+    const { components } = applicationListReply({ applications, page: 1, search: 'dams', posted: 23 });
+    const ids = components[0].toJSON().components.map((button) => decodeId((button).custom_id));
+
+    assert.deepEqual(ids[0]?.args, ['0', 'dams']);
+    assert.deepEqual(ids[1]?.args, ['2', 'dams']);
+  });
+
+  it('clamps a page that is no longer there rather than showing nothing', () => {
+    const { embeds } = applicationListReply({ applications, page: 99, search: null, posted: 23 });
+
+    assert.match(embeds[0].toJSON().footer?.text ?? '', /21-23 of 23/);
+  });
+
+  it('drops the buttons when it all fits on one page', () => {
+    const { components } = applicationListReply({ applications: manyApplications(4), page: 0, search: null, posted: 4 });
+    assert.deepEqual(components, []);
+  });
+
+  it('says why the list is empty, and whether a search caused it', () => {
+    const none = applicationListReply({ applications: [], page: 0, search: null, posted: 0 });
+    const missed = applicationListReply({ applications: [], page: 0, search: 'nobody', posted: 0 });
+
+    assert.match(none.embeds[0].toJSON().description ?? '', /responses tab is empty/);
+    assert.match(missed.embeds[0].toJSON().description ?? '', /Nothing matches/);
+    assert.deepEqual(none.components, []);
+  });
+});

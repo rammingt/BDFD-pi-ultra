@@ -8,14 +8,15 @@
   },
   "scripts": {
     "start": "node bin/bdx.js start",
-    "test": "node --test test/*.test.js"
+    "test": "node --test test/*.test.js test/aesu/*.test.js test/aesu/core/*.test.js"
   },
   "engines": {
     "node": ">=18"
   },
   "dependencies": {
     "discord.js": "^14.16.0",
-    "express": "^4.22.3"
+    "express": "^4.22.3",
+    "pg": "^8.23.0"
   },
   "license": "MIT"
 }

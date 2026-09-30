@@ -447,8 +447,9 @@ const F = {
     return '';
   } },
   // Fills the last menu from a list, with the same {field} templates as $jsonList (up to 25).
+  // An option whose default template fills to yes starts out picked.
   addSelectOptions: { fn(ctx, a) {
-    const [pathText, labelT, valueT] = need(a, 3, '$addSelectOptions[path;label template;value template;description template?]');
+    const [pathText, labelT, valueT] = need(a, 3, '$addSelectOptions[path;label template;value template;description template?;default template?]');
     const m = ctx.out.menu;
     if (!m) fail('add a menu first with $addSelectMenu');
     const items = dig(ctx.json, pathText);
@@ -460,7 +461,10 @@ const F = {
     for (const [i, item] of items.entries()) {
       if (m.menu.options.length >= 25) break;
       const opt = { label: fill(labelT, item, i).slice(0, 100) || 'Item', value: fill(valueT, item, i).slice(0, 100) };
-      if (a[3]) opt.description = fill(a[3], item, i).slice(0, 100);
+      const description = a[3] ? fill(a[3], item, i).slice(0, 100) : '';
+      if (description) opt.description = description;
+      // the option starts picked when this fills to yes or true
+      if (a[4] && bool(fill(a[4], item, i))) opt.default = true;
       m.menu.options.push(opt);
     }
     m.menu.max_values = Math.max(1, Math.min(m.max, m.menu.options.length));
@@ -468,6 +472,35 @@ const F = {
     return '';
   } },
   selectedValues: { fn: (ctx, a) => ctx.selectValues.join(arg(a, 0, ',')) },
+  // For a button, menu or form: replace the message it was on with this result,
+  // instead of sending a new reply. A stopped command still answers privately.
+  updateMessage: { fn(ctx) { ctx.out.update = true; return ''; } },
+
+  // ───────────── forms (modals) ─────────────
+  // Opens a form instead of replying. Only works as the answer to a button, menu or
+  // slash command. What gets typed goes to the "@type modal" command named like the
+  // form's ID (before any colon), which reads it with $input[box ID].
+  showModal: { fn(ctx, a) {
+    const [id, title] = need(a, 2, '$showModal[customID;title]');
+    ctx.out.modal = { custom_id: id.slice(0, 100), title: title.slice(0, 45), components: [] };
+    return '';
+  } },
+  // $addTextInput[box ID;label;short/paragraph?;required?;placeholder?;prefilled text?;min length?;max length?]
+  addTextInput: { fn(ctx, a) {
+    const [id, label] = need(a, 2, '$addTextInput[box ID;label;short/paragraph?;required?;placeholder?;prefilled text?;min length?;max length?]');
+    const m = ctx.out.modal;
+    if (!m) fail('open a form first with $showModal');
+    if (m.components.length >= 5) fail('a form can hold at most 5 boxes');
+    const box = { type: 4, custom_id: id.slice(0, 100), label: label.slice(0, 45), style: arg(a, 2).toLowerCase() === 'paragraph' ? 2 : 1, required: bool(a[3], true) };
+    if (a[4]) box.placeholder = a[4].slice(0, 100);
+    if (a[5]) box.value = a[5].slice(0, 4000);
+    if (a[6]) box.min_length = Math.max(0, num(a[6], 'min length'));
+    if (a[7]) box.max_length = Math.max(1, num(a[7], 'max length'));
+    m.components.push({ type: 1, components: [box] });
+    return '';
+  } },
+  // What was typed in a form box. Only in a "@type modal" command.
+  input: { fn: (ctx, a) => ctx.inputs[need(a, 1, '$input[box ID]')[0].trim()] ?? '' },
   sendMessage: { async fn(ctx, a) {
     need(a, 1, '$sendMessage[text;returnID?]');
     const id = await ctx.send(null, { content: a[0] });
@@ -613,6 +646,9 @@ function permName(p) {
 
 // RoVuew: inventory checks, the flag list, catalog search and share links ($rv...)
 Object.assign(F, require('./rovuew/bdx')({ need, fail, arg, num }));
+
+// AESU shift tracker: shifts, events, promotions, squads, applications, group ($shift..., $event...)
+Object.assign(F, require('./aesu/bdx')({ need, fail, arg, num }));
 
 function buildRegistry(extra = {}) {
   const reg = new Map();

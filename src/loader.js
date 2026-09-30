@@ -3,7 +3,10 @@
 // line containing only "---". Each command starts with optional @directives:
 //
 //   @name ping                (default: file name)
-//   @type prefix              prefix | slash | both | button | join | leave | ready | always | snippet
+//   @type prefix              prefix | slash | both | button | select | modal | join | leave | ready
+//                             | always | interval | snippet | hook
+//                             (a hook is a message the bot's own code sends, like a shift log entry,
+//                              and reads what it is about with $json)
 //   @aliases p, pong
 //   @description Check the bot latency
 //   @option user:user:Who to check:required     (slash options: name:type:description[:required][:choices])
@@ -16,7 +19,7 @@ const fs = require('fs');
 const path = require('path');
 const { parse } = require('./parser');
 
-const TYPES = new Set(['prefix', 'slash', 'both', 'button', 'select', 'join', 'leave', 'ready', 'always', 'interval', 'snippet']);
+const TYPES = new Set(['prefix', 'slash', 'both', 'button', 'select', 'modal', 'join', 'leave', 'ready', 'always', 'interval', 'snippet', 'hook']);
 
 function parseCommandFile(text, file, registry) {
   const chunks = text.replace(/\r\n/g, '\n').split(/^---\s*$/m);
@@ -68,6 +71,13 @@ function loadDir(dir, registry) {
   const errors = [];
   if (!fs.existsSync(dir)) return { commands, errors };
   const walk = (d) => {
+    // A folder with a "when.txt" naming a setting only loads while that setting is yes,
+    // so a whole feature (like commands/aesu) can be switched on and off from .env.
+    const when = path.join(d, 'when.txt');
+    if (d !== dir && fs.existsSync(when)) {
+      const name = fs.readFileSync(when, 'utf8').trim().split(/\s+/)[0];
+      if (name && !['1', 'true', 'yes', 'on'].includes(String(process.env[name] || '').trim().toLowerCase())) return;
+    }
     for (const ent of fs.readdirSync(d, { withFileTypes: true })) {
       const full = path.join(d, ent.name);
       if (ent.isDirectory()) walk(full);

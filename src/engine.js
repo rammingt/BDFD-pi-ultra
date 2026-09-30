@@ -47,6 +47,12 @@ class Engine {
 
   ofType(type) { return this.byType.get(type) || []; }
 
+  /** The "@type hook" command with this name, or null. */
+  hook(name) {
+    const want = String(name).toLowerCase();
+    return this.ofType('hook').find((c) => c.name.toLowerCase() === want) || null;
+  }
+
   /** Find the prefix command for a raw message, or null. */
   match(content, prefix = this.prefix) {
     if (!content.startsWith(prefix)) return null;
@@ -82,9 +88,12 @@ class Engine {
       mentions: env.mentions || [],
       customId: env.customId || '',
       selectValues: env.selectValues || [],
+      inputs: env.inputs || {},
+      // Hooks get their data here, so $json and $jsonList read it straight away
+      json: env.json,
       discord: env.discord || null,
       send: env.send || (async () => ''),
-      out: { embeds: [], components: [], reactions: [], files: [], layout: [], container: null, containers: {}, reply: false, ephemeral: false, deleteCommand: false, dm: false, channelId: null, allowMentions: false },
+      out: { embeds: [], components: [], reactions: [], files: [], layout: [], container: null, containers: {}, reply: false, ephemeral: false, deleteCommand: false, dm: false, channelId: null, allowMentions: false, modal: null },
     };
     let content;
     let stopped = false;
@@ -95,7 +104,7 @@ class Engine {
       content = e.userMessage;
       stopped = true;
       // a stopped command only shows its error message, not half-built embeds
-      ctx.out.embeds = []; ctx.out.components = []; ctx.out.reactions = []; ctx.out.files = []; ctx.out.layout = [];
+      ctx.out.embeds = []; ctx.out.components = []; ctx.out.reactions = []; ctx.out.files = []; ctx.out.layout = []; ctx.out.modal = null;
     }
     const embeds = ctx.out.embeds.filter(Boolean).map((e) => (e.fields.length ? e : { ...e, fields: undefined }));
     // containers with nothing in them are rejected by Discord, so drop them

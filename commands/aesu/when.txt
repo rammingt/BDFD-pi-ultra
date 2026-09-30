@@ -1,0 +1,3 @@
+AESU_ENABLED
+
+The shift tracker commands in this folder only load while AESU_ENABLED=yes in Settings.

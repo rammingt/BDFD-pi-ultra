@@ -1,7 +1,8 @@
 'use strict';
 // Discord glue: turns gateway events into Engine.execute() calls.
 const fs = require('fs');
-const { Client, GatewayIntentBits, Partials, ApplicationCommandOptionType, Events, AttachmentBuilder, MessageFlags } = require('discord.js');
+const { Client, GatewayIntentBits, Partials, ApplicationCommandOptionType, Events, MessageFlags } = require('discord.js');
+const { payloadOf, withNote, asEdit } = require('./payload');
 const { Engine } = require('./engine');
 const { parseDuration } = require('./functions');
 
@@ -40,52 +41,6 @@ async function startBot({ token, commandsDir, dataFile, prefix, watch = true, be
     discord: { client, guild, channel, member },
     send: (id, payload) => sendTo(id, channel, payload),
   });
-
-  const payloadOf = (r) => {
-    if (!r.content && !r.embeds.length && !r.files?.length && !r.layout?.length) return null;
-    const files = (r.files || []).map((f) => new AttachmentBuilder(Buffer.from(f.content, f.encoding || 'utf8'), { name: f.name }));
-    const allowedMentions = r.allowMentions ? undefined : { parse: [] };
-    if (r.layout?.length) {
-      // Container layout: no content or embeds allowed, so text becomes a text block
-      // and files are shown with file blocks.
-      if (r.embeds.length) console.warn(`[bdx] ${r.command || 'a command'} used embeds and containers together. The embed was left out.`);
-      const components = [];
-      if (r.content) components.push({ type: 10, content: r.content.slice(0, 4000) });
-      components.push(...r.layout, ...r.components);
-      // Files already shown somewhere, like a chart in a gallery, don't get a second file block.
-      const used = JSON.stringify(components);
-      for (const f of r.files) {
-        if (!used.includes(`attachment://${f.name}`)) components.push({ type: 13, file: { url: `attachment://${f.name}` } });
-      }
-      return { components: fitText(components), files, flags: MessageFlags.IsComponentsV2, allowedMentions };
-    }
-    return { content: r.content ? r.content.slice(0, 2000) : undefined, embeds: r.embeds, components: r.components, files, allowedMentions };
-  };
-
-  // Discord refuses a container message with more than 4000 characters of text in
-  // total, so shorten the longest text blocks until it fits instead of failing.
-  const fitText = (components, limit = 4000) => {
-    const texts = [];
-    const walk = (list) => list.forEach((c) => {
-      if (c.type === 10) texts.push(c);
-      if (c.components) walk(c.components);
-    });
-    walk(components);
-    let over = texts.reduce((n, t) => n + t.content.length, 0) - limit;
-    while (over > 0) {
-      const longest = texts.reduce((a, b) => (b.content.length > a.content.length ? b : a));
-      const cut = Math.min(over + 3, longest.content.length - 40);
-      if (cut <= 3) break;
-      longest.content = `${longest.content.slice(0, longest.content.length - cut)}...`;
-      over -= cut - 3;
-    }
-    return components;
-  };
-
-  // Add a line of text to a payload, in whichever layout it uses.
-  const withNote = (payload, note) => (payload.flags === MessageFlags.IsComponentsV2
-    ? { ...payload, components: [{ type: 10, content: note }, ...payload.components] }
-    : { ...payload, content: `${payload.content ? `${payload.content}\n` : ''}${note}`.slice(0, 2000) });
 
   // Does this command's code call $name anywhere (including inside $if branches)?
   const uses = (nodes, name) => (nodes || []).some((n) => (n.name === name)
@@ -129,7 +84,21 @@ async function startBot({ token, commandsDir, dataFile, prefix, watch = true, be
     await deliver(r, { message, channel: message.channel });
   }));
 
-  client.on(Events.InteractionCreate, (i) => runSafe('interaction', async () => {
+  // Button, menu and form commands are found by their custom ID: "vote" handles
+  // "vote" and "vote:123", with the part after the colon read as arguments.
+  const byCustomId = (type, id) => engine.ofType(type).find((c) => id === c.name || id.startsWith(`${c.name}:`));
+  // "vote:123:yes" handled by "vote" has the arguments 123 and yes. A name can hold
+  // colons itself ("aesu:event_join"), so the arguments are whatever follows it.
+  const idArgs = (cmd, id) => (cmd && id.length > cmd.name.length ? id.slice(cmd.name.length + 1).split(':') : []);
+
+  client.on(Events.InteractionCreate, (i) => runSafe('interaction', () => answer(i).catch(async (e) => {
+    // Never leave somebody looking at "This interaction failed" with no idea why.
+    const note = { content: 'Something went wrong handling that. Try again in a moment.', ephemeral: true };
+    if (i.isRepliable()) await (i.deferred || i.replied ? i.followUp(note) : i.reply(note)).catch(() => {});
+    throw e;
+  })));
+
+  async function answer(i) {
     let cmd; let extra = {};
     if (i.isChatInputCommand()) {
       // "/flag add" is the command named "flag add"
@@ -144,23 +113,40 @@ async function startBot({ token, commandsDir, dataFile, prefix, watch = true, be
       }
       extra = { options, users, args: Object.values(options) };
     } else if (i.isButton()) {
-      // @name of a button command is matched against the button's custom ID (prefix match, so "vote" handles "vote:123")
-      cmd = engine.ofType('button').find((c) => i.customId === c.name || i.customId.startsWith(`${c.name}:`));
-      extra = { customId: i.customId, args: i.customId.split(':').slice(1) };
+      cmd = byCustomId('button', i.customId);
+      extra = { customId: i.customId, args: idArgs(cmd, i.customId) };
     } else if (i.isStringSelectMenu()) {
-      // Same matching as buttons; the picked values are read with $selectedValues
-      cmd = engine.ofType('select').find((c) => i.customId === c.name || i.customId.startsWith(`${c.name}:`));
-      extra = { customId: i.customId, args: i.customId.split(':').slice(1), selectValues: i.values };
+      // The picked values are read with $selectedValues
+      cmd = byCustomId('select', i.customId);
+      extra = { customId: i.customId, args: idArgs(cmd, i.customId), selectValues: i.values };
+    } else if (i.isModalSubmit()) {
+      // What was typed in each box is read with $input[box ID]
+      cmd = byCustomId('modal', i.customId);
+      const inputs = {};
+      for (const [id, field] of i.fields.fields) inputs[id] = field.value ?? (field.values || []).join(',');
+      extra = { customId: i.customId, args: idArgs(cmd, i.customId), inputs };
     }
     if (!cmd) return;
+    const onMessage = Boolean(i.message) && (i.isButton() || i.isStringSelectMenu() || i.isModalSubmit());
+    // $updateMessage swaps out the message the button was on instead of answering with a new one
+    const mayUpdate = onMessage && uses(cmd.ast, 'updateMessage');
+    // A form has to be the very first answer, so a command that opens one is never deferred
+    const opensForm = uses(cmd.ast, 'showModal');
     // Discord drops an interaction nobody answers within 3 seconds. If the command
     // is still busy (an HTTP call, $wait) by then, tell Discord we're working on it.
     let deferring = null;
-    const timer = setTimeout(() => {
-      deferring = i.deferReply({ ephemeral: uses(cmd.ast, 'ephemeral') }).then(() => true, () => false);
+    const timer = opensForm ? null : setTimeout(() => {
+      deferring = (mayUpdate ? i.deferUpdate() : i.deferReply({ ephemeral: uses(cmd.ast, 'ephemeral') })).then(() => true, () => false);
     }, 2000);
-    const r = await engine.execute(cmd, { ...baseEnv(i.user, i.guild, i.channel, i.member), ...extra })
+    const r = await engine.execute(cmd, { ...baseEnv(i.user, i.guild, i.channel, i.member), messageId: onMessage ? i.message.id : '', ...extra })
       .finally(() => clearTimeout(timer));
+
+    if (r.modal && !r.stopped) {
+      if (!r.modal.components.length) throw new Error(`${cmd.name}: $showModal needs at least one $addTextInput`);
+      await i.showModal(r.modal);
+      return;
+    }
+
     let payload = payloadOf(r);
     // $dm: send the result to DMs and just confirm in the channel. Files show up
     // reliably there, while phones often can't open files in "only you" replies.
@@ -174,13 +160,25 @@ async function startBot({ token, commandsDir, dataFile, prefix, watch = true, be
       }
       r.ephemeral = true;
     }
-    if (deferring && await deferring) {
+    const deferred = deferring && await deferring;
+    const updating = mayUpdate && r.update;
+
+    if (updating && !r.stopped && !r.dm) {
+      // A stopped command's message is an error for this person only, so it never replaces the panel.
+      if (!payload) { if (!deferred) await i.deferUpdate(); return; }
+      if (deferred) await i.editReply(asEdit(payload));
+      else await i.update(asEdit(payload));
+      return;
+    }
+    if (deferred) {
+      // Deferred as an update, but the answer is a new message: send it privately beside the panel.
+      if (mayUpdate) { if (payload) await i.followUp({ ...payload, ephemeral: true }); return; }
       await i.editReply(payload || { content: '✅' });
       return;
     }
-    if (!payload) { if (i.isButton()) await i.deferUpdate(); else await i.reply({ content: '✅', ephemeral: true }); return; }
+    if (!payload) { if (i.isButton() || i.isStringSelectMenu()) await i.deferUpdate(); else await i.reply({ content: '✅', ephemeral: true }); return; }
     await i.reply({ ...payload, ephemeral: r.ephemeral || r.stopped });
-  }));
+  }
 
   const memberEvent = (type) => (member) => runSafe(type, async () => {
     for (const cmd of engine.ofType(type)) {
