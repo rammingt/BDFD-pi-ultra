@@ -44,12 +44,16 @@ async function main() {
     case 'start': {
       const { startBot } = require('../src/bot');
       const { startPanel } = require('../src/panel');
-      const panel = ({ client, engine }) => startPanel({
-        engine, client, commandsDir, envFile,
-        password: process.env.PANEL_PASSWORD,
-        port: Number(process.env.PANEL_PORT) || 3200,
-        host: process.env.PANEL_HOST || '0.0.0.0',
-      });
+      const panel = ({ client, engine }) => {
+        // The AESU shift tracker (commands/aesu), when AESU_ENABLED=yes
+        if (client) void require('../src/aesu').start({ client, engine });
+        return startPanel({
+          engine, client, commandsDir, envFile,
+          password: process.env.PANEL_PASSWORD,
+          port: Number(process.env.PANEL_PORT) || 3200,
+          host: process.env.PANEL_HOST || '0.0.0.0',
+        });
+      };
       // RoVuew's HTTP API (what Verify calls), when keys are set for it
       if (process.env.ROVUEW_API_KEYS) {
         const cfg = require('../src/rovuew/config');

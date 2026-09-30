@@ -4,7 +4,7 @@
 @description Somebody's squad and how many events they have hosted. Defaults to you.
 @option user:user:Who to look up.
 $ephemeral
-$squadInfo[$message[user]]
+$var[r;$squadInfo[$message[user]]]
 $if[$json[inSquad]==yes]
 <@$json[discordId]> is in **$json[squad;label]**, holding $json[squad;roles].
 $else

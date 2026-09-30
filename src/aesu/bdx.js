@@ -924,7 +924,152 @@ module.exports = ({ need, fail, arg, num }) => {
     }
   }
 
+
+  // ───────────── admin ─────────────
+  /** "+1h 30m" or "-45m", so the direction of a correction is never in doubt. */
+  const formatSigned = (ms) => (ms === 0 ? '0m' : `${ms > 0 ? '+' : '-'}${mod('util/time').formatDuration(Math.abs(ms))}`);
+
+  /** Writes what an admin did to ADMIN_LOG_CHANNEL_ID with the "admin log" hook. Never undoes the action. */
+  async function logAdmin(ctx, what, extra = {}) {
+    const { config } = mod('config/index');
+    if (!config.discord.adminLogChannelId) return;
+    try {
+      await mod('ui').post(config.discord.adminLogChannelId, 'admin log', { what, actorId: ctx.author.id, ...extra });
+    } catch (error) {
+      mod('util/logger').createLogger('discord:admin').warn(`Could not write to the admin log channel: ${mod('util/logger').describeError(error)}`);
+    }
+  }
+
+  const adminDenied = (ctx) => {
+    const { config } = mod('config/index');
+    return refuse(ctx, 'denied', config.discord.adminRoleId
+      ? `Only <@&${config.discord.adminRoleId}> can use the admin panel.`
+      : 'This needs the **Administrator** permission, or an `ADMIN_ROLE_ID` role.');
+  };
+
+  async function endShiftFor(ctx, discordId) {
+    const { manager } = rt();
+    const { summarise } = mod('shifts/manager');
+    const { formatDuration } = mod('util/time');
+    const shift = await manager.endIfOpen(discordId, 'admin');
+    if (!shift) return refuse(ctx, 'notonshift', `<@${discordId}> was no longer on shift.`);
+    const banked = formatDuration(summarise([shift]).workedMs);
+    await logAdmin(ctx, `Ended <@${discordId}>'s shift, **${banked}** banked.`);
+    ctx.json = { code: 'ok', discordId, typeLabel: mod('shifts/types').shiftTypeLabel(shift.type), banked };
+    return 'ok';
+  }
+
+  async function endEventFor(ctx, eventId) {
+    const { events } = rt();
+    const event = await events.getEvent(eventId);
+    if (!event) return refuse(ctx, 'missing', 'There is no event with that id.');
+    // Finishing something that never started would bank nothing and look like a bug.
+    if (event.status === 'scheduled') return refuse(ctx, 'not_started', `**${event.name}** has not started yet. Cancel it with \`/event cancel\` instead.`);
+    const result = await events.finish(eventId);
+    if (!result) return refuse(ctx, 'over', `**${event.name}** is already over.`);
+    const banked = (await events.listSignups(eventId)).filter((signup) => signup.shiftId !== null).length;
+    await logAdmin(ctx, `Ended the event **${result.name}**, ${banked} logged.`);
+    ctx.json = { code: 'ok', name: result.name, banked };
+    return 'ok';
+  }
+
+  const adminFns = {
+    // $adminPanel → who is on shift and which events are open, for the admin panel:
+    // shifts (mention, typeLabel, worked, onBreak, label, description), events (id, name, when, host, description)
+    adminPanel: { async fn(ctx) {
+      const { manager, events } = rt();
+      if (!allowed(ctx, 'admin')) return adminDenied(ctx);
+      const { computeDurations } = mod('shifts/manager');
+      const { shiftTypeLabel } = mod('shifts/types');
+      const { formatDuration, discordTimestamp } = mod('util/time');
+      const now = Date.now();
+      const [shifts, open] = await Promise.all([manager.listOpenShifts(), events.listOpenEvents(ctx.guild?.id ?? null)]);
+      ctx.json = {
+        code: 'ok',
+        shiftCount: shifts.length,
+        eventCount: open.length,
+        shifts: shifts.slice(0, 25).map((shift) => {
+          const worked = formatDuration(computeDurations(shift, now).workedMs);
+          return {
+            discordId: shift.discordId, mention: `<@${shift.discordId}>`, typeLabel: shiftTypeLabel(shift.type), worked,
+            onBreak: shift.status === 'on_break' ? ' *(on break)*' : '',
+            label: shift.robloxUsername ?? shift.discordId,
+            description: `${shiftTypeLabel(shift.type)} · ${worked}`.slice(0, 100),
+          };
+        }),
+        events: open.slice(0, 25).map((event) => ({
+          id: event.id, name: event.name.slice(0, 100), host: `<@${event.hostId}>`,
+          when: event.status === 'running' ? 'running' : `starts ${discordTimestamp(event.startsAt, 'R')}`,
+          description: `${event.status} · hosted by ${event.hostId}`.slice(0, 100),
+        })),
+      };
+      return 'ok';
+    } },
+
+    // $adminEndShift[user ID] → ok (typeLabel, banked), or notonshift, denied
+    adminEndShift: { async fn(ctx, a) {
+      rt();
+      if (!allowed(ctx, 'admin')) return adminDenied(ctx);
+      return endShiftFor(ctx, stripId(need(a, 1, '$adminEndShift[user ID]')[0]));
+    } },
+
+    // $adminEndEvent[event ID] → ok (name, banked), or missing, not_started, over, denied
+    adminEndEvent: { async fn(ctx, a) {
+      rt();
+      if (!allowed(ctx, 'admin')) return adminDenied(ctx);
+      return endEventFor(ctx, need(a, 1, '$adminEndEvent[event ID]')[0].trim());
+    } },
+
+    // $adminAdjust[add|remove;user ID;type;time like 90m or 1h30m] → ok (signed, typeLabel, after),
+    // or unknown_type, bad_time, too_much, not_enough, denied. The correction is its own record.
+    adminAdjust: { async fn(ctx, a) {
+      const [way, who, type, raw] = need(a, 4, '$adminAdjust[add|remove;user ID;type;time]');
+      const { manager } = rt();
+      if (!allowed(ctx, 'admin')) return adminDenied(ctx);
+      const { isShiftType, shiftTypeLabel } = mod('shifts/types');
+      const { parseDuration } = mod('ranks/types');
+      const { summarise } = mod('shifts/manager');
+      const { formatDuration } = mod('util/time');
+      const target = stripId(who);
+      const sign = way.trim().toLowerCase().startsWith('rem') ? -1 : 1;
+      if (!isShiftType(type.trim())) return refuse(ctx, 'unknown_type', 'That is not a shift type I know about.');
+      const minutes = parseDuration(raw);
+      if (minutes <= 0) return refuse(ctx, 'bad_time', `\`${raw}\` is not a length of time. Use \`90m\`, \`2h\` or \`1h30m\`.`);
+      // Long enough to fix a mistake, short enough that a typo cannot invent a year.
+      if (minutes > 100 * 60) return refuse(ctx, 'too_much', `That is ${Math.round(minutes / 60)} hours. Adjust at most 100 at a time.`);
+      const deltaMs = sign * minutes * 60_000;
+      // Taking away more than somebody has would leave a negative total.
+      const banked = summarise(await manager.listShifts(target, { type: type.trim() })).workedMs;
+      if (sign === -1 && banked + deltaMs < 0) {
+        return refuse(ctx, 'not_enough', `<@${target}> only has **${formatDuration(banked)}** of ${shiftTypeLabel(type.trim())}, so ${formatDuration(-deltaMs)} cannot come off.`);
+      }
+      await manager.adjust({ discordId: target, guildId: ctx.guild?.id ?? null, type: type.trim(), deltaMs, actorId: ctx.author.id });
+      const after = formatDuration(banked + deltaMs);
+      await logAdmin(ctx, `**${formatSigned(deltaMs)}** of ${shiftTypeLabel(type.trim())} for <@${target}>, now ${after}.`);
+      ctx.json = { code: 'ok', discordId: target, signed: formatSigned(deltaMs), typeLabel: shiftTypeLabel(type.trim()), after };
+      return 'ok';
+    } },
+  };
+
+  const diagnoseFns = {
+    // $aesuDiagnose → sections (title, mark, text) and verdict (mark, text): why the
+    // bot is or is not seeing whoever ran it in game
+    aesuDiagnose: { async fn(ctx) {
+      const { store, client } = rt();
+      const guild = ctx.guild?.id ? client.guilds.cache.get(ctx.guild.id) ?? null : null;
+      const report = await mod('diagnose').diagnose({ store, client, userId: ctx.author.id, guild });
+      const { MARK } = mod('diagnose');
+      ctx.json = {
+        sections: report.sections,
+        verdict: report.verdict ? { ...report.verdict, mark: MARK[report.verdict.status] } : null,
+      };
+      return '';
+    } },
+  };
+
   return {
+    ...diagnoseFns,
+    ...adminFns,
     ...appFns,
     ...groupFns,
     ...eventFns,

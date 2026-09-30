@@ -252,6 +252,7 @@ dialog input, dialog select { width: 100%; margin-top: 6px; }
       <button data-view="functions">Functions</button>
       <button data-view="rovuew">RoVuew</button>
       <button data-view="verify">Verify</button>
+      <button data-view="shifts">Shifts</button>
     </nav>
     <div class="status" id="status" title=""><i class="dot" id="dot"></i><span id="statusText">...</span></div>
     <button class="ghost" id="logout" title="Log out">Log out</button>
@@ -375,6 +376,24 @@ dialog input, dialog select { width: 100%; margin-top: 6px; }
         <div class="sticky"><button class="primary" id="vfSave">Save</button><span class="note">After saving, restart Verify on the Pi: <code class="i">sudo systemctl restart verify</code></span></div>
       </div>
     </div></section>
+
+    <section class="view page hidden" id="v-shifts"><div class="inner">
+      <h2>Shift tracker</h2>
+      <p class="sub" id="shStatus">Loading...</p>
+      <div class="subtabs">
+        <button data-sh="now" class="on">On shift now</button>
+        <button data-sh="import">Import old settings</button>
+      </div>
+      <div class="shpane" id="sh-now">
+        <div class="toolbar2"><button id="shRefresh">Refresh</button></div>
+        <div id="shList"></div>
+      </div>
+      <div class="shpane hidden" id="sh-import">
+        <p class="note">Paste the old tracker's whole <code class="i">.env</code> here (on the Pi: <code class="i">cat /opt/aesu-shift-tracker/.env</code>). Every setting comes over. <code class="i">PORT</code> becomes <code class="i">AESU_PORT</code>, and anything BDX already uses gets an <code class="i">AESU_</code> name so both keep working. The old bot token is left out, since BDX logs in with its own. Then restart.</p>
+        <textarea id="shEnv" rows="12" placeholder="DATABASE_URL=postgres://...&#10;ROBLOX_COOKIE=...&#10;SHIFT_PROMPT_CHANNEL_ID=..." style="width:100%;font-family:var(--mono);font-size:12.5px"></textarea>
+        <div class="toolbar2"><button class="primary" id="shImport">Import</button><span class="note" id="shNote"></span></div>
+      </div>
+    </div></section>
   </main>
 </div>
 
@@ -436,6 +455,7 @@ function show(view) {
   if (view === 'logs') loadLogs();
   if (view === 'functions') renderFunctions();
   if (view === 'rovuew') loadRovuew();
+  if (view === 'shifts') loadShifts();
   try { localStorage.setItem('bdx.view', view); } catch {}
 }
 $$('nav button').forEach((b) => (b.onclick = () => show(b.dataset.view)));
@@ -510,7 +530,7 @@ function renderFiles() {
   $('#fileList').innerHTML = state.files.map((f) => `
     <div class="file ${f.name === state.file ? 'on' : ''}" data-name="${esc(f.name)}">
       <div class="n">${esc(f.name)} ${f.name === state.file && dirty() ? '<i class="mod"></i>' : ''}</div>
-      <div class="c">${f.name === 'variables.json' ? 'Starting values for saved variables' : f.commands.length ? esc(f.commands.map((c) => (c.type === 'prefix' ? c.name : `${c.name} (${c.type})`)).join(', ')) : 'No commands loaded'}</div>
+      <div class="c">${f.name === 'variables.json' ? 'Starting values for saved variables' : f.off ? `Off until ${esc(f.when)}=yes in Settings` : f.commands.length ? esc(f.commands.map((c) => (c.type === 'prefix' ? c.name : `${c.name} (${c.type})`)).join(', ')) : 'No commands loaded'}</div>
     </div>`).join('') || '<div class="note" style="padding:10px">No files yet.</div>';
   $$('.file').forEach((el) => (el.onclick = () => openFile(el.dataset.name)));
 }
@@ -969,6 +989,50 @@ $('#vfSave').onclick = async () => {
   }
   if (!Object.keys(changes).length) return toast('Nothing changed');
   try { await api('PUT', '/api/verify/settings', { changes }); toast('Saved. Restart Verify on the Pi to use it.', 5000); loadVerifySettings(); } catch (e) { toast(e.message); }
+};
+
+/* ---------- shift tracker ---------- */
+$$('[data-sh]').forEach((b) => (b.onclick = () => {
+  $$('[data-sh]').forEach((x) => x.classList.toggle('on', x === b));
+  $$('.shpane').forEach((p) => p.classList.toggle('hidden', p.id !== `sh-${b.dataset.sh}`));
+}));
+async function loadShifts() {
+  try {
+    const s = (await api('GET', '/api/aesu/status')).raw;
+    if (!s.on) {
+      $('#shStatus').textContent = s.note;
+      $('#shList').innerHTML = '';
+      return;
+    }
+    const yes = (v, on, off) => (v ? on : `<span style="color:var(--warn)">${off}</span>`);
+    $('#shStatus').innerHTML = `${esc(s.storage)} · ${s.linked} linked account(s) · ${s.shifts.length} on shift now<br>`
+      + `<span class="note">${yes(s.presence, `Watching ${s.trackedGames} game(s)`, 'Presence tracking off (needs ROBLOX_COOKIE and tracked games)')} · `
+      + `${yes(s.oauth, '/connect on', '/connect off (needs the Roblox OAuth settings)')} · web server on port ${s.webPort}`
+      + `${s.applications ? ' · applications on' : ''}${s.sheets ? ' · sheet sync on' : ''}</span>`;
+    $('#shList').innerHTML = s.shifts.map((x) => `<div class="rvrow"><div>
+        <div class="t">${esc(x.name)}${x.roblox ? ` <span class="note">(${esc(x.roblox)})</span>` : ''}</div>
+        <div class="m"><span class="pill">${esc(x.type)}</span><span class="pill ${x.status === 'On break' ? '' : 'hot'}">${esc(x.status)}</span>${esc(x.worked)}${x.game ? ` · ${esc(x.game)}` : ''}</div>
+        <div class="m">Started ${new Date(x.startedAt).toLocaleString()}</div>
+      </div><div class="acts"><button class="danger" data-shend="${esc(x.discordId)}">End shift</button></div></div>`).join('')
+      || '<div class="note">Nobody is on shift.</div>';
+    $$('[data-shend]').forEach((b) => (b.onclick = async () => {
+      if (!(await ask({ title: 'End this shift?', html: '<p>The time so far is banked, the same as /admin endshift.</p>', ok: 'End shift', danger: true }))) return;
+      try { const r = (await api('POST', '/api/aesu/endshift', { discordId: b.dataset.shend })).raw; toast(`Ended, ${r.banked} banked`); loadShifts(); } catch (e) { toast(e.message); }
+    }));
+  } catch (e) { $('#shStatus').textContent = e.message; }
+}
+$('#shRefresh').onclick = loadShifts;
+$('#shImport').onclick = async () => {
+  if (!$('#shEnv').value.trim()) return toast('Paste the old .env first');
+  try {
+    const r = (await api('POST', '/api/aesu/import', { content: $('#shEnv').value })).raw;
+    $('#shEnv').value = '';
+    $('#shNote').innerHTML = `Copied ${r.copied.length} setting(s)${r.renamed.length ? `, renamed ${esc(r.renamed.join(', '))}` : ''}${r.skipped.length ? `, left out ${esc(r.skipped.join(', '))}` : ''}. AESU_ENABLED is now yes.`;
+    if (await ask({ title: 'Restart now?', html: '<p>The shift tracker starts after a restart. Stop the old tracker on the Pi first, since both want the same port.</p>', ok: 'Restart' })) {
+      await api('POST', '/api/restart', {}).catch(() => {});
+      toast('Restarting...', 5000);
+    }
+  } catch (e) { toast(e.message, 6000); }
 };
 
 /* ---------- start ---------- */

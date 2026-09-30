@@ -103,6 +103,18 @@ async function boot({ client, engine, log, describeError }) {
   setInterval(() => void syncSheets(), config.sheets.syncIntervalMinutes * MINUTE_MS).unref();
 
   const onReady = async () => {
+    // The old tracker registered its commands to DISCORD_GUILD_ID. BDX registers every
+    // command globally, so when it logs in as that same bot those server copies would
+    // show up twice in the list. BDX never makes server commands, so clearing them is safe.
+    if (config.discord.guildId) {
+      const guild = await client.guilds.fetch(config.discord.guildId).catch(() => null);
+      const leftovers = guild ? await guild.commands.fetch().catch(() => null) : null;
+      if (leftovers?.size) {
+        await guild.commands.set([]).catch((error) => log.warn(`Could not clear the old server commands: ${describeError(error)}`));
+        log.info(`Cleared ${leftovers.size} old server command(s) the previous tracker registered, so none show twice`);
+      }
+    }
+
     // Group management stands on its own, so it is checked before the presence bail out.
     if (isGroupConfigured()) {
       const group = await verifyGroupAccess();

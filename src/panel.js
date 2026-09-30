@@ -9,7 +9,8 @@ const { parseCommandFile } = require('./loader');
 
 const STATIC_DIR = path.join(__dirname, '..', 'panel');
 const STATIC_TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.webmanifest': 'application/manifest+json' };
-const FILE_NAME = /^[\w .()]{1,60}\.bdx$|^variables\.json$/;
+// A command file, optionally one folder down (commands/aesu/shifts.bdx is "aesu/shifts.bdx")
+const FILE_NAME = /^(?:[\w.()-]{1,40}\/)?[\w .()]{1,60}\.bdx$|^variables\.json$/;
 const SECRET_KEYS = /TOKEN|PASSWORD|KEY|SECRET/i;
 const RESTART_KEYS = new Set(['DISCORD_TOKEN', 'PANEL_PASSWORD', 'PANEL_PORT', 'PANEL_HOST', 'COMMANDS_DIR', 'DATA_FILE']);
 const SESSION_DAYS = 30;
@@ -183,20 +184,38 @@ function startPanel({ engine, client, commandsDir, envFile, password, port = 320
   const docs = functionDocs(engine.registry);
   const verifyEnv = process.env.VERIFY_ENV_FILE || path.join(require('os').homedir(), 'Verify', '.env');
 
+  const root = path.resolve(commandsDir);
   const safePath = (name) => {
     if (!FILE_NAME.test(name || '') || name.includes('..')) return null;
-    const full = path.join(commandsDir, name);
-    return path.dirname(full) === path.resolve(commandsDir) ? full : null;
+    const full = path.resolve(commandsDir, name);
+    const dir = path.dirname(full);
+    return dir === root || path.dirname(dir) === root ? full : null;
   };
 
-  const listFiles = () => fs.readdirSync(commandsDir)
-    .filter((n) => n.endsWith('.bdx') || n === 'variables.json')
-    .map((name) => {
-      const full = path.join(commandsDir, name);
+  // A folder's when.txt names the setting that switches it on (see loader.js).
+  const folderSwitch = (dir) => {
+    const file = path.join(root, dir, 'when.txt');
+    const name = fs.existsSync(file) ? fs.readFileSync(file, 'utf8').trim().split(/\s+/)[0] : '';
+    if (!name) return null;
+    return { when: name, off: !['1', 'true', 'yes', 'on'].includes(String(process.env[name] || '').trim().toLowerCase()) };
+  };
+
+  const listFiles = () => {
+    const names = [];
+    for (const ent of fs.readdirSync(root, { withFileTypes: true })) {
+      if (ent.isFile() && (ent.name.endsWith('.bdx') || ent.name === 'variables.json')) names.push(ent.name);
+      if (ent.isDirectory() && !ent.name.startsWith('.')) {
+        for (const sub of fs.readdirSync(path.join(root, ent.name))) if (sub.endsWith('.bdx')) names.push(`${ent.name}/${sub}`);
+      }
+    }
+    return names.map((name) => {
+      const full = path.join(root, name);
       const cmds = engine.commands.filter((c) => path.resolve(c.file) === full).map((c) => ({ name: c.name, type: c.type }));
-      return { name, size: fs.statSync(full).size, mtime: fs.statSync(full).mtimeMs, commands: cmds };
-    })
-    .sort((a, b) => (a.name === 'variables.json') - (b.name === 'variables.json') || a.name.localeCompare(b.name));
+      const folder = name.includes('/') ? folderSwitch(name.split('/')[0]) : null;
+      return { name, size: fs.statSync(full).size, mtime: fs.statSync(full).mtimeMs, commands: cmds, ...(folder || {}) };
+    }).sort((a, b) => (a.name === 'variables.json') - (b.name === 'variables.json')
+      || a.name.includes('/') - b.name.includes('/') || a.name.localeCompare(b.name));
+  };
 
   const testEnv = (args) => ({
     args,
@@ -253,7 +272,13 @@ function startPanel({ engine, client, commandsDir, envFile, password, port = 320
       sent = [];
       const args = String(body.args || '').split(/\s+/).filter(Boolean);
       const extra = cmd.type === 'button' ? { customId: `${cmd.name}:${args.join(':')}` } : {};
+      // A hook is tested with the data its code reads, typed as JSON in the arguments box
+      if (cmd.type === 'hook') {
+        try { extra.json = JSON.parse(String(body.args || '{}')); } catch { return reply(422, { error: 'For a hook, type the data it reads as JSON, like {"name":"Patrol"}' }); }
+        extra.args = [];
+      }
       const r = await engine.execute(cmd, { ...testEnv(args), ...extra });
+      if (r.modal) r.content = `${r.content ? `${r.content}\n` : ''}(Opens a form: ${r.modal.title}, with ${r.modal.components.length} box(es))`;
       return {
         command: cmd.name, type: cmd.type, content: r.content, embeds: r.embeds, stopped: r.stopped, ms: r.ms,
         ephemeral: r.ephemeral, channelId: r.channelId, layout: r.layout,
@@ -318,6 +343,9 @@ $include[verifyreport]`;
     },
 
     ...require('./rovuew/panelRoutes')(reply, 'web panel'),
+    ...require('./aesu/panelRoutes')(reply, {
+      author: 'web panel', readEnv: () => envEntries(envFile), writeEnv: (changes) => writeEnv(envFile, changes),
+    }),
     'POST /api/restart': () => {
       // systemd starts the bot again (Restart=always), which also reloads .env
       setTimeout(() => { engine.store.flush(); process.exit(0); }, 300);

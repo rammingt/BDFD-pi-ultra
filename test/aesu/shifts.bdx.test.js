@@ -91,7 +91,7 @@ describe('shift commands in BDX', () => {
     assert.match(h.text(r), /Pick what you are running/);
     assert.match(h.text({ content: '', layout: h.client.edits.at(-1).payload.components }), /Logging this session/);
     r = await h.run('aesu:prompt_decline', { args: ['100000000000000001'], messageId: '43' });
-    assert.match(r.content, /Nothing was logged/);
+    assert.equal(r.content, 'Nothing was logged. Run `/shift manage` if you change your mind.');
   });
 
   it('explains that linking is not set up', async () => {

@@ -1,0 +1,112 @@
+@name admin panel
+@type slash
+@parent End shifts and events, and correct banked time.
+@description Who is on shift, what is running, and the controls for both.
+$ephemeral
+$var[r;$adminPanel]
+$onlyIf[$var[r]==ok;$json[error]]
+$include[adminpanel]
+---
+@name adminpanel
+@type snippet
+$c[The admin panel, from $adminPanel's JSON. Shared by the command, the menus and Refresh.]
+$addContainer[admin]
+$addTextDisplay[### Administrator panel]
+$addTextDisplay[**On shift ($json[shiftCount])**
+$if[$json[shiftCount]==0;Nobody is on shift.;$jsonList[shifts;{mention} · {typeLabel}, {worked}{onBreak}]]]
+$addTextDisplay[**Events ($json[eventCount])**
+$if[$json[eventCount]==0;No events scheduled or running.;$jsonList[events;**{name}** · {when}, hosted by {host}]]]
+$if[$json[shiftCount]>0]
+$addSelectMenu[aesu:admin_end_shift;End somebody's shift]
+$addSelectOptions[shifts;{label};{discordId};{description}]
+$endif
+$if[$json[eventCount]>0]
+$addSelectMenu[aesu:admin_end_event;End an event and bank its attendance]
+$addSelectOptions[events;{name};{id};{description}]
+$endif
+$addButton[yes;aesu:admin_refresh;Refresh;secondary]
+$addTextDisplay[-# Only you can see this. /admin addtime and /admin removetime correct banked hours.]
+$closeContainer
+---
+@name aesu:admin_refresh
+@type button
+$updateMessage
+$var[r;$adminPanel]
+$onlyIf[$var[r]==ok;$json[error]]
+$include[adminpanel]
+---
+@name aesu:admin_end_shift
+@type select
+$c[Ends the picked shift, then redraws the panel so that row is gone. The outcome shows above it.]
+$updateMessage
+$var[r;$adminEndShift[$selectedValues]]
+$if[$var[r]==denied]
+$stop[$json[error]]
+$endif
+$var[outcome;$if[$var[r]==ok;Ended <@$json[discordId]>'s shift, **$json[banked]** banked.;$json[error]]]
+$var[r;$adminPanel]
+$var[outcome]
+$include[adminpanel]
+---
+@name aesu:admin_end_event
+@type select
+$updateMessage
+$var[r;$adminEndEvent[$selectedValues]]
+$if[$var[r]==denied]
+$stop[$json[error]]
+$endif
+$var[outcome;$if[$var[r]==ok;Ended the event **$json[name]**, $json[banked] logged.;$json[error]]]
+$var[r;$adminPanel]
+$var[outcome]
+$include[adminpanel]
+---
+@name admin endshift
+@type slash
+@description End somebody's shift for them. The time so far is banked.
+@option user:user:Whose shift to end.:required
+$ephemeral
+$var[r;$adminEndShift[$message[user]]]
+$if[$var[r]==notonshift]
+$stop[<@$message[user]> is not on shift.]
+$endif
+$onlyIf[$var[r]==ok;$json[error]]
+Ended <@$json[discordId]>'s $json[typeLabel]. **$json[banked]** banked.
+---
+@name admin endevent
+@type slash
+@description End an event now and bank everybody's attendance.
+@option event:string:Event id, from /event list.:required
+$ephemeral
+$var[r;$adminEndEvent[$message[event]]]
+$onlyIf[$var[r]==ok;$json[error]]
+**$json[name]** is closed. $json[banked] attendee(s) had their time logged.
+---
+@name admin addtime
+@type slash
+@description Add banked time to somebody, on one shift type.
+@option user:user:Who to credit.:required
+@option type:string:Which shift type it counts as.:required:from shiftTypes
+@option time:string:How much. 90m, 2h, 1h30m.:required
+$ephemeral
+$var[r;$adminAdjust[add;$message[user];$message[type];$message[time]]]
+$onlyIf[$var[r]==ok;$json[error]]
+**$json[signed]** of $json[typeLabel] for <@$json[discordId]>. They now have **$json[after]** of it.
+---
+@name admin removetime
+@type slash
+@description Take banked time off somebody, on one shift type.
+@option user:user:Who to take it from.:required
+@option type:string:Which shift type to take it off.:required:from shiftTypes
+@option time:string:How much. 90m, 2h, 1h30m.:required
+$ephemeral
+$var[r;$adminAdjust[remove;$message[user];$message[type];$message[time]]]
+$onlyIf[$var[r]==ok;$json[error]]
+**$json[signed]** of $json[typeLabel] for <@$json[discordId]>. They now have **$json[after]** of it.
+---
+@name admin log
+@type hook
+$c[Written to ADMIN_LOG_CHANNEL_ID (or the shift log) for everything /admin does.]
+$addContainer[log]
+$addTextDisplay[$json[what]
+By <@$json[actorId]> · <t:$getTimestamp:f>]
+$closeContainer

@@ -163,7 +163,7 @@ $endif
 @type button
 $ephemeral
 $onlyIf[$message[1]==$authorID;That prompt belongs to someone else.]
-$shiftPromptAnswer[no]
+$var[r;$shiftPromptAnswer[no]]
 Nothing was logged. Run `/shift manage` if you change your mind.
 ---
 @name aesu:prompt_start

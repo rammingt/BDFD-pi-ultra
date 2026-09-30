@@ -82,15 +82,21 @@ Several commands per file? Separate them with a `---` line.
 | Directive | Meaning |
 |---|---|
 | `@name ping` | Command name (default: file name) |
-| `@type prefix` | `prefix`, `slash`, `both`, `button`, `join`, `leave`, `ready`, `always` (every message), `interval`, `snippet` (shared code for `$include`) |
+| `@type prefix` | `prefix`, `slash`, `both`, `button`, `select` (menu picks), `modal` (form answers), `join`, `leave`, `ready`, `always` (every message), `interval`, `snippet` (shared code for `$include`), `hook` (a message the bot's own code sends, see below) |
 | `@aliases a, b` | Extra triggers |
 | `@description ...` | Slash command description |
-| `@option name:type:description:required:choices` | Slash option (`string`, `integer`, `number`, `boolean`, `user`, `channel`, `role`), read it with `$message[name]`. Choices look like `badge=Badge\|accessory=Accessory` |
+| `@option name:type:description:required:choices` | Slash option (`string`, `integer`, `number`, `boolean`, `user`, `channel`, `role`), read it with `$message[name]`. Choices look like `badge=Badge\|accessory=Accessory`, or `from shiftTypes` for a list that follows your settings. Write `\:` for a colon inside a description |
 | `@name flag add` | A space makes a slash subcommand: `/flag add` |
 | `@parent Manage flags` | Description of the `/flag` group (optional) |
 | `@every 1h` | For `@type interval` (use `$useChannel[id]` to choose where it posts) |
 
-**Buttons:** `$addButton[no;vote:yes;Yes;success]` + a command with `@type button` and `@name vote` handles every button whose ID is `vote` or starts with `vote:`. `$message[1]` is the part after the colon.
+**Buttons:** `$addButton[no;vote:yes;Yes;success]` + a command with `@type button` and `@name vote` handles every button whose ID is `vote` or starts with `vote:`. `$message[1]` is the part after the colon. A name can have colons in it too: `@name aesu:event_join` handles `aesu:event_join:abc:guard`, with `$message[1]` = `abc` and `$message[2]` = `guard`. Put `$updateMessage` in a button or menu command to redraw the message it was on instead of sending a new one.
+
+**Forms:** a button or slash command can answer with a form instead: `$showModal[report:$authorID;Report a problem]` then `$addTextInput[what;What happened?;paragraph;yes]`. What gets typed goes to the `@type modal` command named like the form (`report`), which reads it with `$input[what]`.
+
+**Hooks:** some messages aren't answers to anyone, like a shift log entry the bot posts when somebody starts a shift. The code that sends them runs a `@type hook` command by name and sends what it makes, so the wording and layout stay editable here. A hook reads what it is about with `$json[...]`. To try one in the panel, open it, press Test and type sample data as JSON in the arguments box. A hook that ends with `$stop` sends nothing.
+
+**Switching a folder on and off:** a `when.txt` in a folder of `commands/` holding a setting name (like `AESU_ENABLED`) loads that folder only while the setting is `yes`.
 
 ### Conditions
 Block form (BDFD 2 style) or inline:
@@ -105,7 +111,7 @@ $endif
 
 $if[$getUserVar[money]>=100;rich;poor]
 ```
-Operators: `== != > < >= <=`, joined with `&&` / `||`. Numbers compare numerically.
+Operators: `== != > < >= <=`, joined with `&&` / `||`. Numbers compare numerically. `==` and `!=` are looked for first, so a value with `<` or `>` in it, like a mention, compares as a whole.
 
 ### Variables
 - `$var[name;value]` / `$var[name]` — temporary, this run only
@@ -138,7 +144,10 @@ npm test
 - **Files:** `$attachFile[name;content;base64?]` sends a file with the reply (up to 10). Add `base64` for pictures from an API, then show one in a card with `$addMediaGallery[attachment://name.png]`
 - **Lists:** `$jsonList[path;template;limit?;separator?;more text?]` repeats a template for every item in a list: `{name}` reads a field, `{flag.url}` a nested one, `{#}` is the position, `{name|fallback}` fills in when a field is empty. `$jsonCount[path]` counts a list
 - **Saving for later:** `$jsonStash[time?]` keeps the current JSON (15 minutes by default) and returns a token to put in a button's ID. `$jsonUnstash[token;ownerOnly?]` loads it back and returns `ok`, `expired` or `notyours`
-- **Menus:** `$addSelectMenu[customID;placeholder?;min?;max?]`, then `$addSelectOption[label;value;description?]` or `$addSelectOptions[path;label template;value template;description template?]` to fill it from a list. Picks go to a `@type select` command named like the menu, which reads them with `$selectedValues[separator?]`
+- **Menus:** `$addSelectMenu[customID;placeholder?;min?;max?]`, then `$addSelectOption[label;value;description?]` or `$addSelectOptions[path;label template;value template;description template?;default template?]` to fill it from a list. Picks go to a `@type select` command named like the menu, which reads them with `$selectedValues[separator?]`
+- **Buttons from a list:** `$addButtons[path;customID template;label template;style?;new row first?]` adds one button per item, five to a row
+- **Forms:** `$showModal[customID;title] $addTextInput[box ID;label;short/paragraph?;required?;placeholder?;prefilled?;min?;max?] $input[box ID]`, and `$updateMessage` for buttons and menus
+- **Shift tracker:** `$shift... $event... $promo... $squad... $group... $app... $admin... $aesu...` (see the shift tracker section)
 - **RoVuew:** `$rvCheck $rvCooldown $rvIsAdmin $rvFlags $rvFlagAdd $rvFlagRemove $rvKeywords $rvKeywordAdd $rvKeywordRemove $rvSearch $rvSearchAdd $rvResolveLink` (see the RoVuew section)
 - **Reuse:** `$include[name]` runs a `@type snippet` command in place, sharing variables, the HTTP result and the embed
 - **Settings:** `$env[BDX_NAME]` reads a value from `.env`. Only names starting with `BDX_` work, so a command can't print your bot token.
@@ -172,6 +181,84 @@ BDX_VERIFY_LOG_CHANNEL=the staff channel for reports
 The bot's role has to sit above the verified role in your server settings, or Discord won't let it give the role. The join check needs the **Server Members** intent, which BDX already asks for. Because both run on the Pi, BDX talks to Verify directly and nothing has to be public.
 
 Buttons and slash commands that take longer than 2 seconds are deferred automatically, so a slow check doesn't fail with "This interaction failed".
+
+## AESU shift tracker
+
+The shift tracker is rebuilt on BDX. Its engine (the database, the presence watcher, events, ranks, squads, Google Sheets, the Roblox group, `/connect`'s web page) is the old tracker's own code in `src/aesu`, turned into plain JavaScript with its logic and comments kept, and it uses the **same database and tables**, so every link, shift and event carries over. Everything people see is BDX in `commands/aesu`, which you can edit in the panel like any other command.
+
+| File | Commands |
+|---|---|
+| `shifts.bdx` | `/shift manage`, `/shift history`, `/checktime`, `/connect`, `/disconnect`, the shift panel buttons, join prompts, the shift log, the auto end DM |
+| `events.bdx` | `/event create, list, info, end, cancel`, the event post and its sign up buttons, the start ping, the host away ping |
+| `promotions.bdx` | `/promote request, check, ranks, sync`, the request card with Approve and Deny |
+| `squads.bdx` | `/squad info, set, clear, roster` |
+| `group.bdx` | `/group pending, accept, decline, rank, promote, demote, exile, info, roles`, the group log |
+| `applications.bdx` | `/applications list, post`, the application card, the reason form, background checks, the applicant's DM |
+| `admin.bdx` | `/admin panel, endshift, endevent, addtime, removetime`, the admin log |
+| `diagnose.bdx` | `/diagnose` |
+
+The folder only loads while `AESU_ENABLED=yes`. The panel's **Shifts** page shows who is on shift (and can end a shift), and brings the old tracker's settings over in one paste.
+
+Button IDs are the same as the old tracker's, so buttons on posts the old bot already made keep working if BDX logs in as that same bot. Background checks now go straight to the RoVuew inside BDX.
+
+### Moving over from the old tracker
+
+The old tracker runs as `aesu-shift-tracker` from `/opt/aesu-shift-tracker`. This moves it into BDX without losing anything, and the last step undoes it if you need to. Paste each box into the Pi's terminal one at a time.
+
+**1. Pick which bot runs it.** BDX can only log in as one bot. Two choices:
+
+* **Recommended: BDX logs in as the tracker's bot.** Everyone already knows that bot, its roles are set up, and buttons on old event posts, applications and promotion cards keep working. Put the tracker bot's token in BDX's Settings as `DISCORD_TOKEN`. Your Verify and RoVuew commands move to that bot too, so it has to be in the same servers.
+* **Keep BDX's own bot.** Invite it to the AESU server and give its role **Manage Roles**, placed above the duty and squad roles. Buttons on posts the old bot made stop working. Kick the old bot afterwards, or its dead commands stay in the list.
+
+**2. Update BDX.**
+```bash
+cd ~/bdfd-pi-ultra
+git pull
+npm install
+```
+
+**3. Copy the old settings over.** Show them:
+```bash
+sudo cat /opt/aesu-shift-tracker/.env
+```
+Copy everything it prints. Open the panel, go to **Shifts**, then **Import old settings**, paste, and press **Import**. Say **no** to restarting for now. `PORT` becomes `AESU_PORT`, anything BDX already uses gets an `AESU_` name so both keep working, and the old bot token and RoVuew address are left out.
+
+**4. Stop the old tracker** (both want port 3000), and put its service file aside so the Pi panel doesn't keep warning that it's down:
+```bash
+sudo systemctl stop aesu-shift-tracker
+sudo systemctl disable aesu-shift-tracker
+sudo mv /etc/systemd/system/aesu-shift-tracker.service /opt/aesu-shift-tracker/aesu-shift-tracker.service.bak
+sudo systemctl daemon-reload
+```
+
+**5. Start BDX with the tracker.**
+```bash
+sudo systemctl restart bdx
+journalctl -u bdx -n 80 --no-pager
+```
+Look for `Shift tracker started`, `HTTP server listening on :3000` and `Roblox presence account`. Then run `/diagnose` in Discord: every section should be ✅, apart from ones you never set up.
+
+The OAuth page, `/health` and the privacy and terms pages are on the same port as before, so the Tailscale Funnel address and the Roblox app's redirect URI don't change. The Pi agent (`aesu-agent`) keeps running as it is. Its "Shift bot" row will say *Not installed*, since that service is now BDX (`sudo systemctl status bdx`).
+
+**Going back**, if something is wrong:
+```bash
+sudo systemctl stop bdx
+sudo mv /opt/aesu-shift-tracker/aesu-shift-tracker.service.bak /etc/systemd/system/aesu-shift-tracker.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now aesu-shift-tracker
+```
+Then set `AESU_ENABLED=no` in BDX's Settings and start BDX again with `sudo systemctl start bdx`. Nothing in the database was changed by the move, so the old tracker carries on from where BDX left off.
+
+### The functions behind it
+
+Each one does the work and leaves what it found in `$json`, like RoVuew's. Actions return `ok` or a short reason word, with the reason in plain words in `$json[error]`, so a command can show that or its own text:
+
+```
+$var[r;$shiftStart[$message[1];panel]]
+$onlyIf[$var[r]==ok;$json[error]]
+```
+
+`$shiftPanel $shiftStart $shiftBreak $shiftResume $shiftEnd $shiftHistory $shiftTime $shiftPromptAnswer $connectLink $disconnect $robloxLink`, `$eventCreate $eventList $eventInfo $eventEnd $eventCancel $eventSignup`, `$promoCheck $promoRequest $promoRanks $promoSync $promoDecide`, `$squadInfo $squadSet $squadClear $squadRoster`, `$groupOn $groupPending $groupDecide $groupRank $groupStep $groupExile $groupInfo $groupRoles`, `$appOn $appList $appPost $appCard $appCheck $appDecide`, `$adminPanel $adminEndShift $adminEndEvent $adminAdjust`, and `$aesuOn $aesuAllowed[staff|admin|promotion|group|squad] $aesuRole $aesuJoinWarning $aesuDiagnose`. The comment above each one in `src/aesu/bdx.js` lists what it puts in `$json`.
 
 ## Differences from BDFD
 - `$dm` works in buttons and slash commands too: the reply goes to DMs and the channel gets a short "Sent to your DMs".
