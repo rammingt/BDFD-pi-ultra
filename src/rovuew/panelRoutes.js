@@ -149,10 +149,23 @@ module.exports = (reply, author) => ({
     if (body.kind === 'flags') {
       const bad = data.findIndex((f) => !f || typeof f !== 'object' || !f.name || !f.assetId);
       if (bad !== -1) return reply(400, { error: `Entry ${bad + 1} is missing a name or assetId, so this doesn't look like flags.json` });
-      const incoming = data.map((f) => ({
+      const all = data.map((f) => ({
         id: f.id || Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
         ...f, assetId: String(f.assetId), type: TYPES.includes(f.type) ? f.type : 'accessory',
       }));
+      // The same item twice in one file would count its score twice. Keep the first copy,
+      // but take a written reason or higher score from a later one.
+      const sameSpace = (a, b) => a === b || (a !== 'badge' && b !== 'badge');
+      const incoming = [];
+      let doubles = 0;
+      for (const f of all) {
+        const first = incoming.find((x) => x.assetId === f.assetId && sameSpace(x.type, f.type));
+        if (!first) { incoming.push(f); continue; }
+        doubles++;
+        if ((!first.reason || /^(No reason provided|Added from a catalog search)$/.test(first.reason)) && f.reason && !/^(No reason provided|Added from a catalog search)$/.test(f.reason)) first.reason = f.reason;
+        if ((Number(f.score) || 0) > (Number(first.score) || 0)) first.score = f.score;
+        if (!first.link && f.link) first.link = f.link;
+      }
       const file = path.join(mod('config').DATA_DIR, 'flags.json');
       backup(file);
       let result = incoming; let skipped = 0;
@@ -164,7 +177,7 @@ module.exports = (reply, author) => ({
         result = [...current, ...fresh];
       }
       storage.saveFlags(result);
-      return { kind: 'flags', mode, total: result.length, added: mode === 'merge' ? incoming.length - skipped : result.length, skipped };
+      return { kind: 'flags', mode, total: result.length, added: mode === 'merge' ? incoming.length - skipped : result.length, skipped, doubles };
     }
 
     if (body.kind === 'keywords') {

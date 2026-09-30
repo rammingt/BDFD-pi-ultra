@@ -925,7 +925,8 @@ $('#imGo').onclick = async () => {
   if (mode === 'replace' && !(await ask({ title: 'Replace the whole list?', html: '<p>Everything on the current list is swapped for what you pasted. A backup of the old file stays on the Pi.</p>', ok: 'Replace', danger: true }))) return;
   try {
     const r = (await api('POST', '/api/rovuew/import', { kind, mode, content: $('#imText').value })).raw;
-    $('#imNote').textContent = mode === 'merge' ? `Added ${r.added}, skipped ${r.skipped} already there. ${r.total} in total now.` : `Replaced. ${r.total} in total now.`;
+    $('#imNote').textContent = (mode === 'merge' ? `Added ${r.added}, skipped ${r.skipped} already there. ${r.total} in total now.` : `Replaced. ${r.total} in total now.`)
+      + (r.doubles ? ` The file had ${r.doubles} item(s) listed twice, so each was kept once.` : '');
     toast('Imported'); loadRovuew();
   } catch (e) { toast(e.message, 6000); }
 };
