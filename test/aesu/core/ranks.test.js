@@ -21,7 +21,8 @@ const {
   parseGeneral,
   RankError,
 } = require('../../../src/aesu/ranks/types');
-const { progressBar, promotionEmbed } = require('../../../src/aesu/discord/embeds');
+// The promotion card itself is commands/aesu/promotions.bdx now, tested in test/aesu.
+const { progressBar } = require('../../../src/aesu/views');
 const { applyEdits, parseRankGrid, rankGridFor } = require('../../../src/aesu/sheets/sync');
 
 function makeRank(overrides = {}) {
@@ -355,106 +356,5 @@ describe('progressBar', () => {
   it('clamps rather than drawing a bar longer than the track', () => {
     assert.equal(progressBar(5), '████████████');
     assert.equal(progressBar(-1), '░░░░░░░░░░░░');
-  });
-});
-
-describe('promotionEmbed', () => {
-  const target = { displayName: 'Rammingt', displayAvatarURL: () => 'https://example.invalid/a.png' };
-
-  const partway = {
-    discordId: 'd1',
-    current: makeRank({ rank: 10, name: 'Trainee' }),
-    next: makeRank({ rank: 50, name: 'Guard' }),
-    ...measureRank(
-      { ...makeRank(), requirements: parseRequirements('shift_guard 90m, 5h, 2 events').requirements },
-      new Map([['shift_guard', 45]]),
-      1,
-    ),
-  };
-
-  const view = { progress: partway, target, robloxUsername: 'tester', squad: 'Alpha', hostedEvents: 1 };
-
-  it('says where they are and where they are going', () => {
-    const embed = promotionEmbed(view).toJSON();
-
-    assert.equal(embed.title, 'Promotion to Guard');
-    assert.match(embed.description ?? '', /Currently \*\*Trainee\*\*/);
-    assert.match(embed.description ?? '', /Alpha/);
-    assert.match(embed.description ?? '', /`tester`/);
-    // 45 of 90 minutes, 45 of 300, and 1 of 2 events: (0.5 + 0.15 + 0.5) / 3.
-    assert.match(embed.description ?? '', /38%/);
-  });
-
-  it('gives every requirement its own bar, ticked or not', () => {
-    const fields = promotionEmbed(view).toJSON().fields ?? [];
-
-    assert.equal(fields.length, 3);
-    assert.equal(fields[0]?.name, '⬜ Shift Guard time');
-    assert.match(fields[0]?.value ?? '', /██████░░░░░░/, '45 of 90 minutes');
-    assert.match(fields[0]?.value ?? '', /45m \/ 1h 30m/);
-    assert.match(fields[2]?.value ?? '', /1 \/ 2/, 'events are counted, not timed');
-  });
-
-  it('turns green and says so once everything is met', () => {
-    const ready = {
-      ...partway,
-      ...measureRank(
-        { ...makeRank(), requirements: parseRequirements('shift_guard 90m').requirements },
-        new Map([['shift_guard', 200]]),
-        0,
-      ),
-    };
-    const embed = promotionEmbed({ ...view, progress: ready }).toJSON();
-
-    assert.equal(embed.color, 0x57f287);
-    assert.match(embed.description ?? '', /`\/promote request`/);
-    assert.equal(embed.fields?.[0]?.name, '✅ Shift Guard time');
-  });
-
-  it('lists what a person has to confirm, and says who confirms it', () => {
-    const withGeneral = {
-      ...partway,
-      next: { ...makeRank({ rank: 50, name: 'Guard' }), general: ['Final Exam', 'Approval of HR+'] },
-    };
-    const fields = promotionEmbed({ ...view, progress: withGeneral }).toJSON().fields ?? [];
-    const general = fields.at(-1);
-
-    assert.equal(general?.name, 'General requirements');
-    assert.match(general?.value ?? '', /• Final Exam/);
-    assert.match(general?.value ?? '', /• Approval of HR\+/);
-    assert.match(general?.value ?? '', /Required to promote/);
-  });
-
-  it('leaves the field out entirely when a rank has none', () => {
-    const fields = promotionEmbed(view).toJSON().fields ?? [];
-    assert.ok(!fields.some((field) => field.name === 'General requirements'));
-  });
-
-  it('says plainly when nobody has written any requirements', () => {
-    const empty = { ...partway, ...measureRank(makeRank(), new Map(), 0) };
-    const embed = promotionEmbed({ ...view, progress: empty }).toJSON();
-
-    assert.match(embed.description ?? '', /error message/);
-    assert.deepEqual(embed.fields ?? [], []);
-  });
-
-  it('handles somebody at the top, with nothing above them', () => {
-    const top = { ...partway, next: null, requirements: [], ready: false, overall: 0 };
-    const embed = promotionEmbed({ ...view, progress: top, squad: null, hostedEvents: 0 }).toJSON();
-
-    assert.equal(embed.title, 'Promotions');
-    assert.match(embed.description ?? '', /blame/);
-    assert.equal(embed.footer?.text, 'Counted across every shift ever logged');
-  });
-
-  it('stays inside the 25 fields Discord allows', () => {
-    const many = parseRequirements(Array.from({ length: 40 }, (_, i) => `${i + 1}m`).join(', ')).requirements;
-    const embed = promotionEmbed({
-      ...view,
-      progress: { ...partway, ...measureRank({ ...makeRank(), requirements: many }, new Map(), 0) },
-    }).toJSON();
-
-    assert.ok((embed.fields ?? []).length <= 25, `${(embed.fields ?? []).length} fields`);
-    assert.equal(embed.fields?.at(-1)?.name, 'More');
   });
 });

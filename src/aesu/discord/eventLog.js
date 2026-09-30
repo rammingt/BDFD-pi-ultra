@@ -36,10 +36,21 @@ function registerEventPosts(events) {
       }
 
       const signups = await events.listSignups(event.id);
-      // Discord mentions at most 100 people in one message.
-      const ping = signups.filter((signup) => signup.roleKey !== DECLINED_ROLE_KEY).slice(0, 100).map((signup) => signup.discordId);
-      if (ping.length === 0) return;
-      await ui.post(event.channelId, 'event start', eventView(event, signups), { about: event.hostId, guildId: event.guildId, ping });
+      const attending = signups.filter((signup) => signup.roleKey !== DECLINED_ROLE_KEY);
+      if (attending.length === 0) return;
+
+      // Discord mentions at most 100 people, and cuts a message off at 2000 characters.
+      const ping = [];
+      let length = event.name.length + 40;
+      for (const signup of attending.slice(0, 100)) {
+        const mention = ` <@${signup.discordId}>`;
+        if (length + mention.length > 1900) break;
+        ping.push(signup.discordId);
+        length += mention.length;
+      }
+      const extra = attending.length - ping.length;
+      const mentions = ping.map((id) => `<@${id}>`).join(' ') + (extra > 0 ? ` and ${extra} more` : '');
+      await ui.post(event.channelId, 'event start', { ...eventView(event, signups), mentions }, { about: event.hostId, guildId: event.guildId, ping });
     } catch (error) {
       log.error(`Could not post the ${change} notice for event ${event.id}: ${describeError(error)}`);
     }

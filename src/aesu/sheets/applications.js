@@ -1,9 +1,8 @@
 'use strict';
-const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
 const { config } = require('../config/index');
 const { resolveSendableChannel } = require('../discord/channels');
-const { Actions, encodeId } = require('../discord/ids');
 const { isRovuewConfigured } = require('../rovuew/client');
+const ui = require('../ui');
 const { createLogger, describeError } = require('../util/logger');
 const { a1, createSheetsClient } = require('./client');
 
@@ -12,9 +11,8 @@ const log = createLogger('applications');
 /** How many data rows have already been posted. */
 const CURSOR_KEY = 'applications.postedRows';
 
-const COLOR = 0x5865f2;
-const COLOR_ACCEPTED = 0x57f287;
-const COLOR_DENIED = 0xed4245;
+/** Remembers what each posted card showed, so it can be redrawn with the decision. */
+const CARD_KEY = (messageId) => `applications.card.${messageId}`;
 /** Discord allows 25 embed fields; one is held back for the decision, and the rest go in a closing line. */
 const MAX_FIELDS = 23;
 const MAX_FIELD_VALUE = 1024;
@@ -88,42 +86,32 @@ function applicationLine(application) {
   return `\`#${application.rowIndex}\` **${applicationTitle(application).slice(0, 60)}**${mention ? ` ${mention}` : ''}${when}`;
 }
 
-function applicationEmbed(application) {
+/**
+ * Everything the "application" card shows, as plain text for the hook. The
+ * timestamp column is left out of the answers, since the card shows it on its own.
+ */
+function applicationView(application) {
   const name = findAnswer(application, ['roblox', 'username', 'in-game', 'in game']);
   const discord = findAnswer(application, ['discord']);
   const mention = mentionFor(discord);
-
-  const embed = new EmbedBuilder()
-    .setColor(COLOR)
-    .setTitle(truncate(name ?? discord ?? 'New application', 240))
-    .setFooter({ text: `Application #${application.rowIndex}` });
-
-  const lead = [mention, name && discord && !mention ? `Discord: ${discord}` : null]
-    .filter(Boolean)
-    .join(' · ');
-  if (lead) embed.setDescription(lead);
-
-  if (application.submittedAt) embed.setTimestamp(application.submittedAt);
-
-  // The timestamp column is already the embed's own timestamp, so skip it here.
   const shown = application.answers.filter((_, index) => index > 0 || !application.submittedAt);
-
-  for (const { question, answer } of shown.slice(0, MAX_FIELDS)) {
-    embed.addFields({
-      name: truncate(question, 256),
-      value: truncate(answer, MAX_FIELD_VALUE),
-      inline: answer.length <= 40,
-    });
-  }
-
-  const hidden = shown.length - MAX_FIELDS;
-  if (hidden > 0) embed.addFields({ name: 'More', value: `${hidden} further answer(s) in the sheet.` });
-
-  if (config.applications.formUrl) {
-    embed.setURL(config.applications.formUrl);
-  }
-
-  return embed;
+  const args = applicationArgs(application);
+  return {
+    row: application.rowIndex,
+    title: truncate(name ?? discord ?? 'New application', 240),
+    lead: [mention, name && discord && !mention ? `Discord: ${discord}` : null].filter(Boolean).join(' · '),
+    submitted: application.submittedAt ? `<t:${Math.floor(application.submittedAt.getTime() / 1000)}:f>` : '',
+    answers: shown.slice(0, MAX_FIELDS).map(({ question, answer }) => ({ question: truncate(question, 256), answer: truncate(answer, MAX_FIELD_VALUE) })),
+    hiddenCount: Math.max(0, shown.length - MAX_FIELDS),
+    formUrl: config.applications.formUrl,
+    username: args[1],
+    discordId: args[2],
+    // what the buttons carry: row, Roblox username and Discord id, "-" when unknown
+    args: args.join(':'),
+    // only offered when there is a username to look up
+    canCheck: isRovuewConfigured() && applicantUsername(application) ? 'yes' : 'no',
+    decided: 'no',
+  };
 }
 
 /**
@@ -143,53 +131,12 @@ function applicantDiscordId(application) {
 }
 
 /**
- * Accept / Deny under each application. Everything the buttons need travels in the
- * custom id, so they keep working after a restart without any stored state.
+ * What the Accept, Deny and Background check buttons carry, so they keep working
+ * after a restart without any stored state: the row, the Roblox username and the
+ * Discord id, with "-" standing in for anything that could not be read.
  */
-function applicationComponents(application) {
-  const args = [
-    String(application.rowIndex),
-    applicantUsername(application) ?? '-',
-    applicantDiscordId(application) ?? '-',
-  ];
-
-  const row = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId(encodeId(Actions.AppAccept, ...args)).setLabel('Accept').setStyle(ButtonStyle.Success),
-    new ButtonBuilder().setCustomId(encodeId(Actions.AppDeny, ...args)).setLabel('Deny').setStyle(ButtonStyle.Danger),
-  );
-
-  // Only offered when there is a Roblox username to look up; a button that can only
-  // ever answer "I do not know who that is" is worse than no button.
-  if (isRovuewConfigured() && applicantUsername(application)) {
-    row.addComponents(
-      new ButtonBuilder()
-        .setCustomId(encodeId(Actions.AppCheck, ...args))
-        .setLabel('Background check')
-        .setStyle(ButtonStyle.Secondary),
-    );
-  }
-
-  return [row];
-}
-
-const DECISION_FIELDS = ['Accepted', 'Denied'];
-
-/** True once somebody has decided this application, so a double click cannot stack. */
-function isDecided(embed) {
-  return (embed.fields ?? []).some((field) => DECISION_FIELDS.includes(field.name));
-}
-
-/** Recolours the posted card and records who decided it. */
-function markDecided(
-  embed,
-  options,
-) {
-  return EmbedBuilder.from(embed)
-    .setColor(options.accepted ? COLOR_ACCEPTED : COLOR_DENIED)
-    .addFields({
-      name: options.accepted ? 'Accepted' : 'Denied',
-      value: truncate([`By <@${options.actorId}>`, options.note].filter(Boolean).join('\n'), MAX_FIELD_VALUE),
-    });
+function applicationArgs(application) {
+  return [String(application.rowIndex), applicantUsername(application) ?? '-', applicantDiscordId(application) ?? '-'];
 }
 
 function isApplicationsConfigured() {
@@ -237,11 +184,7 @@ class ApplicationWatcher {
     }
 
     try {
-      await channel.send({
-        embeds: [applicationEmbed(application)],
-        components: applicationComponents(application),
-      });
-      return true;
+      return await this.send(channel.id, application);
     } catch (error) {
       log.error(`Could not post application #${application.rowIndex}: ${describeError(error)}`);
       return false;
@@ -275,10 +218,7 @@ class ApplicationWatcher {
       let sent = 0;
       for (const application of fresh) {
         try {
-          await channel.send({
-            embeds: [applicationEmbed(application)],
-            components: applicationComponents(application),
-          });
+          if (!(await this.send(channel.id, application))) break;
           sent += 1;
           // Save after each one, so a failure halfway does not repost the earlier ones.
           await this.store.setSetting(CURSOR_KEY, posted + sent);
@@ -293,6 +233,24 @@ class ApplicationWatcher {
     } finally {
       this.running = false;
     }
+  }
+
+  /** Posts the "application" hook and keeps what it showed for the decision later. */
+  async send(channelId, application) {
+    const view = applicationView(application);
+    const message = await ui.post(channelId, 'application', view, { pingRoles: [] });
+    if (!message) return false;
+    await this.store.setSetting(CARD_KEY(message.id), view);
+    return true;
+  }
+
+  /** The card a message shows, or null for one this bot did not post. */
+  card(messageId) {
+    return this.store.getSetting(CARD_KEY(messageId));
+  }
+
+  async saveCard(messageId, view) {
+    await this.store.setSetting(CARD_KEY(messageId), view);
   }
 
   /** Treats everything already in the sheet as seen, so a first run is not a flood. */
@@ -317,4 +275,4 @@ function createApplicationWatcher(store) {
   return new ApplicationWatcher(client, store);
 }
 
-module.exports = { parseApplications, applicationTitle, applicationLine, applicationEmbed, applicantUsername, applicantDiscordId, applicationComponents, DECISION_FIELDS, isDecided, markDecided, isApplicationsConfigured, ApplicationWatcher, createApplicationWatcher };
+module.exports = { parseApplications, applicationTitle, applicationLine, applicationView, applicantUsername, applicantDiscordId, applicationArgs, isApplicationsConfigured, ApplicationWatcher, createApplicationWatcher };

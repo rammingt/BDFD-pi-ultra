@@ -149,7 +149,7 @@ describe('PresenceWatcher', () => {
 
     assert.equal(sent.length, 1);
     assert.match(textOf(sent[0]?.payload), /^<@discord-1>\n/);
-    assert.deepEqual(sent[0]?.payload.allowedMentions, { users: ['discord-1'] });
+    assert.deepEqual(sent[0]?.payload.allowedMentions, { users: ['discord-1'], roles: [] });
 
     const state = await store.getWatchState('discord-1');
     assert.ok(state?.sessionKey, 'a session is opened');

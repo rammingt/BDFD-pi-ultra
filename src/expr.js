@@ -38,8 +38,6 @@ function math(input) {
   return Number.isInteger(v) ? v : Math.round(v * 1e10) / 1e10;
 }
 
-const OPS = ['==', '!=', '>=', '<=', '>', '<'];
-
 function compare(a, op, b) {
   a = a.trim(); b = b.trim();
   const na = Number(a), nb = Number(b);
@@ -54,10 +52,15 @@ function compare(a, op, b) {
   }
 }
 
+// == and != are looked for first, so a value with < or > in it, like a mention
+// (<@123>==) or an arrow, is compared as a whole instead of split in the middle.
+const OP_ORDER = [['==', '!='], ['>=', '<='], ['>', '<']];
+
 function single(c) {
-  for (let i = 0; i < c.length; i++) {
-    for (const op of OPS) {
-      if (c.startsWith(op, i)) return compare(c.slice(0, i), op, c.slice(i + op.length));
+  for (const group of OP_ORDER) {
+    for (let i = 0; i < c.length; i++) {
+      const op = group.find((o) => c.startsWith(o, i));
+      if (op) return compare(c.slice(0, i), op, c.slice(i + op.length));
     }
   }
   const v = c.trim().toLowerCase();

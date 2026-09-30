@@ -103,6 +103,22 @@ function eventUrl(event) {
   return `https://discord.com/channels/${event.guildId}/${event.channelId}/${event.messageId}`;
 }
 
+/** Long sign up lists get cut short, so a post never runs past what Discord allows. */
+function clampLines(lines, empty = 'Nobody yet') {
+  if (lines.length === 0) return empty;
+  const kept = [];
+  let length = 0;
+  for (const line of lines) {
+    if (length + line.length + 1 > 960) {
+      kept.push(`and ${lines.length - kept.length} more`);
+      break;
+    }
+    kept.push(line);
+    length += line.length + 1;
+  }
+  return kept.join('\n');
+}
+
 function signupView(signup, at) {
   return {
     discordId: signup.discordId,
@@ -121,6 +137,9 @@ function signupView(signup, at) {
 function eventView(event, signups = [], now = Date.now()) {
   const at = event.endsAt ?? now;
   const people = (list) => list.map((signup) => signupView(signup, at));
+  const names = (list) => clampLines(list.map((signup) => `<@${signup.discordId}>`));
+  const timed = (list) => clampLines(list.map((signup) => `<@${signup.discordId}> · ${formatDuration(totalAttendance(signup, at))}`));
+  const showTime = event.status === 'ended';
   const declined = signups.filter((signup) => signup.roleKey === DECLINED_ROLE_KEY);
   const banked = signups.filter((signup) => signup.shiftId !== null);
   const open = event.status === 'scheduled' || event.status === 'running';
@@ -133,6 +152,7 @@ function eventView(event, signups = [], now = Date.now()) {
     host: `<@${event.hostId}>`,
     status: event.status,
     statusLabel: EVENT_STATUS_LABEL[event.status] ?? event.status,
+    nowNote: event.status === 'running' ? ' (happening now)' : '',
     open: yes(open),
     ended: yes(event.status === 'ended'),
     starts: discordTimestamp(event.startsAt, 'F'),
@@ -151,21 +171,91 @@ function eventView(event, signups = [], now = Date.now()) {
         count: role.limit === null ? `${taken.length}` : `${taken.length}/${role.limit}`,
         full: yes(role.limit !== null && taken.length >= role.limit),
         people: people(taken),
+        // the names under this option; once it is over, with how long each stayed
+        list: showTime ? timed(taken) : names(taken),
       };
     }),
     declinedLabel: DECLINED_LABEL,
     declinedKey: DECLINED_ROLE_KEY,
     declined: people(declined),
     declinedCount: declined.length,
+    declinedList: names(declined),
     banked: people(banked),
     bankedCount: banked.length,
+    bankedList: timed(banked),
     attending: people(signups.filter((signup) => signup.roleKey !== DECLINED_ROLE_KEY)),
     signupCount: signups.length,
   };
 }
 
+const BAR_WIDTH = 12;
+
+/** `██████░░░░░░`, a progress bar that survives being copied out of Discord. */
+function progressBar(fraction) {
+  const filled = Math.round(Math.min(1, Math.max(0, fraction)) * BAR_WIDTH);
+  return `${'█'.repeat(filled)}${'░'.repeat(BAR_WIDTH - filled)}`;
+}
+
+const MODE_LABEL = { auto: 'automatic', approval: 'needs approval', manual: 'staff only' };
+
+function rankView(rank) {
+  if (!rank) return null;
+  const { describeRequirement, effectiveMode } = require('./ranks/types');
+  return {
+    roleId: rank.roleId,
+    rank: rank.rank,
+    name: rank.name,
+    mode: effectiveMode(rank),
+    modeLabel: MODE_LABEL[effectiveMode(rank)],
+    members: rank.memberCount ?? '',
+    requirements: rank.requirements.length === 0 ? '' : rank.requirements.map((requirement) => describeRequirement(requirement)).join(', '),
+    requirementCount: rank.requirements.length,
+    general: rank.general.join(', '),
+    generalCount: rank.general.length,
+    generalList: rank.general.map((entry) => `• ${entry}`).join('\n'),
+    notes: rank.notes ?? '',
+  };
+}
+
+/**
+ * Where somebody stands against the next rank up: one entry per requirement with a
+ * bar, what is done out of what is asked, and whether it is met.
+ */
+function progressView(progress) {
+  const { formatMinutes, describeRequirement } = require('./ranks/types');
+  const amount = (entry) => (entry.requirement.kind === 'events'
+    ? `${Math.floor(entry.done)} / ${entry.target}`
+    : `${formatMinutes(entry.done)} / ${formatMinutes(entry.target)}`);
+  const requirements = progress.requirements.map((entry) => ({
+    label: entry.label,
+    description: describeRequirement(entry.requirement),
+    met: yes(entry.met),
+    icon: entry.met ? '✅' : '⬜',
+    mark: entry.met ? '✅' : '❌',
+    bar: progressBar(entry.fraction),
+    amount: amount(entry),
+    percent: Math.round(entry.fraction * 100),
+  }));
+  return {
+    discordId: progress.discordId,
+    current: rankView(progress.current),
+    currentName: progress.current?.name ?? 'not in the group',
+    next: rankView(progress.next),
+    nextName: progress.next?.name ?? '',
+    atTop: yes(progress.next === null),
+    ready: yes(progress.ready),
+    unconfigured: yes(progress.next !== null && progress.requirements.length === 0),
+    percent: Math.round(progress.overall * 100),
+    requirements: requirements.slice(0, 23),
+    requirementCount: requirements.length,
+    hiddenCount: Math.max(0, requirements.length - 23),
+    missing: requirements.filter((entry) => entry.met === 'no').map((entry) => entry.label).join(', '),
+  };
+}
+
 module.exports = {
-  EVENT_STATUS_LABEL, eventView, signupView, eventUrl,
+  progressBar, rankView, progressView, MODE_LABEL,
+  EVENT_STATUS_LABEL, eventView, signupView, eventUrl, clampLines,
   STATUS_LABEL, END_REASON_LABEL, SOURCE_LABEL, yes, signed, gameLine, robloxLine,
   shiftView, typeView, panelView, shiftTypeLabel, formatDuration, formatHours, discordTimestamp,
 };

@@ -3,6 +3,7 @@
 const fs = require('fs');
 const { Client, GatewayIntentBits, Partials, ApplicationCommandOptionType, Events, MessageFlags } = require('discord.js');
 const { payloadOf, withNote, asEdit } = require('./payload');
+const { choicesFrom } = require('./choices');
 const { Engine } = require('./engine');
 const { parseDuration } = require('./functions');
 
@@ -194,9 +195,10 @@ async function startBot({ token, commandsDir, dataFile, prefix, watch = true, be
     const optionDef = (o) => {
       const type = OPTION_TYPES[o.type] ?? OPTION_TYPES.string;
       const numeric = type === OPTION_TYPES.integer || type === OPTION_TYPES.number;
+      const choices = o.choicesFrom ? choicesFrom(o.choicesFrom) : o.choices || [];
       return {
         name: o.name, description: o.description, required: o.required, type,
-        ...(o.choices?.length ? { choices: o.choices.slice(0, 25).map((ch) => ({ name: ch.name, value: numeric ? Number(ch.value) : ch.value })) } : {}),
+        ...(choices.length ? { choices: choices.slice(0, 25).map((ch) => ({ name: String(ch.name).slice(0, 100), value: numeric ? Number(ch.value) : ch.value })) } : {}),
       };
     };
     // Required options have to come first, or Discord refuses the command.

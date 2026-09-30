@@ -1,0 +1,50 @@
+@name squad info
+@type slash
+@parent See and set which squad somebody is in.
+@description Somebody's squad and how many events they have hosted. Defaults to you.
+@option user:user:Who to look up.
+$ephemeral
+$squadInfo[$message[user]]
+$if[$json[inSquad]==yes]
+<@$json[discordId]> is in **$json[squad;label]**, holding $json[squad;roles].
+$else
+<@$json[discordId]> is not in a squad.
+$endif
+Events hosted: **$json[hosted]**$if[$json[hostedLive]>0; ($json[hostedLive] on now)]
+---
+@name squad set
+@type slash
+@description Move somebody into a squad. Their old squad role is taken off.
+@option user:user:Who to move.:required
+@option squad:string:Which squad they join.:required:from squads
+$ephemeral
+$onlyIf[$aesuAllowed[squad]==yes;$if[$aesuRole[squad]==;You do not have permission to do that.;Only $aesuRole[squad] can change squads.]]
+$var[r;$squadSet[$message[user];$message[squad]]]
+$onlyIf[$var[r]==ok;$json[error]]
+<@$json[discordId]> is in **$json[squad;label]**, holding $json[squad;roles].
+---
+@name squad clear
+@type slash
+@description Take somebody out of their squad.
+@option user:user:Who to remove.:required
+$ephemeral
+$onlyIf[$aesuAllowed[squad]==yes;$if[$aesuRole[squad]==;You do not have permission to do that.;Only $aesuRole[squad] can change squads.]]
+$var[r;$squadClear[$message[user]]]
+$onlyIf[$var[r]==ok;$json[error]]
+$if[$json[was]!=]
+<@$json[discordId]> was taken out of **$json[was]**.
+$else
+<@$json[discordId]> was not in a squad. Any leftover squad roles have been cleared.
+$endif
+---
+@name squad roster
+@type slash
+@description How many people are in each squad.
+$ephemeral
+$var[r;$squadRoster]
+$onlyIf[$var[r]==ok;$json[error]]
+$addContainer[roster]
+$addTextDisplay[$jsonList[squads;{role} · **{count}** member(s)]]
+$addSeparator
+$addTextDisplay[Not in a squad: **$json[unassigned]**]
+$closeContainer

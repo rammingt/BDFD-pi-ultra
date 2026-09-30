@@ -45,8 +45,31 @@ function dig(obj, pathText) {
 }
 const show = (v) => (v == null ? '' : typeof v === 'object' ? JSON.stringify(v) : String(v));
 
+// The {field} templates of $jsonList and friends: {name}, {flag.url}, {#} for the
+// position, {@} for the item itself, {field|fallback} when the field is empty.
+function fillTemplate(template, item, i) {
+  return template.replace(/\{([#@]|[\w.]+)(?:\|([^}]*))?\}/g, (m, key, fallback) => {
+    const text = show(key === '#' ? i + 1 : key === '@' ? item : dig(item, key));
+    return text === '' && fallback !== undefined ? fallback : text;
+  });
+}
+
 // Results kept for later, like a "View full list" button: token -> { data, owner, timer }
 const stash = new Map();
+
+// Buttons go five to a row, inside the open container or below the message.
+function pushButton(ctx, { newRow, id, label, style, disabled = false, emoji }) {
+  const styles = { primary: 1, secondary: 2, success: 3, danger: 4, link: 5 };
+  style = String(style || 'primary').toLowerCase();
+  if (!styles[style]) fail(`style must be one of ${Object.keys(styles).join(', ')}`);
+  const list = ctx.out.container ? ctx.out.container.components : ctx.out.components;
+  const last = list[list.length - 1];
+  if (!last || last.type !== 1 || newRow || last.components.length >= 5 || last.components[0]?.type !== 2) list.push({ type: 1, components: [] });
+  const b = { type: 2, style: styles[style], label: String(label).slice(0, 80), disabled };
+  if (style === 'link') b.url = id; else b.custom_id = String(id).slice(0, 100);
+  if (emoji) b.emoji = /^\d+$/.test(emoji) ? { id: emoji } : { name: emoji };
+  list[list.length - 1].components.push(b);
+}
 
 // Where a container piece goes: the named container, the open one, or the message itself.
 function place(ctx, id) {
@@ -406,17 +429,18 @@ const F = {
   addReactions: { fn(ctx, a) { ctx.out.reactions.push(...need(a, 1, '$addReactions[emoji;emoji...]')); return ''; } },
   addButton: { fn(ctx, a) {
     need(a, 3, '$addButton[newRow(yes/no);customID or URL;label;style?;disabled?;emoji?]');
-    const style = arg(a, 3, 'primary').toLowerCase();
-    const styles = { primary: 1, secondary: 2, success: 3, danger: 4, link: 5 };
-    if (!styles[style]) fail(`style must be one of ${Object.keys(styles).join(', ')}`);
-    // Inside an open container the button goes into the container; otherwise below the message.
-    const list = ctx.out.container ? ctx.out.container.components : ctx.out.components;
-    const last = list[list.length - 1];
-    if (!last || last.type !== 1 || bool(a[0]) || last.components.length >= 5) list.push({ type: 1, components: [] });
-    const b = { type: 2, style: styles[style], label: a[2], disabled: bool(a[4]) };
-    if (style === 'link') b.url = a[1]; else b.custom_id = a[1];
-    if (a[5]) b.emoji = /^\d+$/.test(a[5]) ? { id: a[5] } : { name: a[5] };
-    list[list.length - 1].components.push(b);
+    pushButton(ctx, { newRow: bool(a[0]), id: a[1], label: a[2], style: arg(a, 3, 'primary'), disabled: bool(a[4]), emoji: a[5] });
+    return '';
+  } },
+  // One button per item of a list, with the same {field} templates as $jsonList.
+  // $addButtons[path;customID template;label template;style?;new row first (yes/no)?]
+  addButtons: { fn(ctx, a) {
+    const [pathText, idT, labelT] = need(a, 3, '$addButtons[path;customID template;label template;style?;new row first (yes/no)?]');
+    const items = dig(ctx.json, pathText);
+    if (!Array.isArray(items)) return '';
+    for (const [i, item] of items.entries()) {
+      pushButton(ctx, { newRow: i === 0 && bool(a[4]), id: fillTemplate(idT, item, i), label: fillTemplate(labelT, item, i) || 'Button', style: arg(a, 3, 'primary') });
+    }
     return '';
   } },
   // Dropdown menus. Picks go to a "@type select" command named like the menu's ID
@@ -454,10 +478,7 @@ const F = {
     if (!m) fail('add a menu first with $addSelectMenu');
     const items = dig(ctx.json, pathText);
     if (!Array.isArray(items)) return '';
-    const fill = (t, item, i) => t.replace(/\{([#@]|[\w.]+)(?:\|([^}]*))?\}/g, (x, key, fb) => {
-      const text = show(key === '#' ? i + 1 : key === '@' ? item : dig(item, key));
-      return text === '' && fb !== undefined ? fb : text;
-    });
+    const fill = fillTemplate;
     for (const [i, item] of items.entries()) {
       if (m.menu.options.length >= 25) break;
       const opt = { label: fill(labelT, item, i).slice(0, 100) || 'Item', value: fill(valueT, item, i).slice(0, 100) };
@@ -571,11 +592,7 @@ const F = {
     if (!Array.isArray(items) || !items.length) return '';
     const limit = a[2] ? Math.max(1, num(a[2], 'limit')) : items.length;
     const sep = a[3] !== undefined && a[3] !== '' ? a[3].replace(/\\n/g, '\n') : '\n';
-    const lines = items.slice(0, limit).map((item, i) => template.replace(/\{([#@]|[\w.]+)(?:\|([^}]*))?\}/g, (m, key, fallback) => {
-      const v = key === '#' ? i + 1 : key === '@' ? item : dig(item, key);
-      const text = show(v);
-      return text === '' && fallback !== undefined ? fallback : text;
-    }));
+    const lines = items.slice(0, limit).map((item, i) => fillTemplate(template, item, i));
     if (items.length > limit && a[4]) lines.push(a[4].replace(/\{n\}/g, String(items.length - limit)));
     return lines.join(sep);
   } },

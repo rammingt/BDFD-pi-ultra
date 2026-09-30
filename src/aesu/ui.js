@@ -52,13 +52,13 @@ async function render(name, data, { about = null, guildId = null } = {}) {
   return payloadOf(r);
 }
 
-/** Posts a hook in a channel. `ping` lists the user IDs the message may mention. */
-async function post(channelId, name, data, { about = null, guildId = null, ping = [] } = {}) {
+/** Posts a hook in a channel. `ping` and `pingRoles` list who the message may mention. */
+async function post(channelId, name, data, { about = null, guildId = null, ping = [], pingRoles = [] } = {}) {
   const channel = await resolveSendableChannel(host?.client, channelId);
   if (!channel) return null;
   const payload = await render(name, data, { about, guildId });
   if (!payload) return null;
-  return channel.send({ ...payload, allowedMentions: { users: ping } });
+  return channel.send({ ...payload, allowedMentions: { users: ping, roles: pingRoles } });
 }
 
 /** Redraws an existing message with a hook. False when the message is gone. */

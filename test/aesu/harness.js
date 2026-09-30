@@ -64,8 +64,8 @@ async function setup(env = {}) {
   registerEventPosts(events);
 
   /** Runs a command by name as `userId`, with slash options or button arguments. */
-  async function run(name, { userId = '100000000000000001', options = null, args = [], selectValues = [], inputs = {}, messageId = '', roles = [], admin = false, channelId = '300000000000000003' } = {}) {
-    const cmd = engine.commands.find((c) => c.name.toLowerCase() === name.toLowerCase());
+  async function run(name, { type = null, userId = '100000000000000001', options = null, args = [], selectValues = [], inputs = {}, messageId = '', roles = [], admin = false, channelId = '300000000000000003' } = {}) {
+    const cmd = engine.commands.find((c) => c.name.toLowerCase() === name.toLowerCase() && (!type || c.type === type));
     if (!cmd) throw new Error(`no command ${name}`);
     const member = { roles: { cache: new Map(roles.map((r) => [r, true])) }, permissions: { has: (p) => admin && p === 'Administrator' } };
     const u = fakeUser(userId);
@@ -75,6 +75,7 @@ async function setup(env = {}) {
       channel: { id: channelId, name: 'general' },
       discord: { client, member, guild: null, channel: null },
       options, args: options ? Object.values(options) : args, selectValues, inputs, messageId,
+      customId: options ? '' : [name, ...args].join(':'),
       users: new Map([[u.id, { ...u, displayName: u.globalName, avatar: u.displayAvatarURL() }]]),
     });
     return r;

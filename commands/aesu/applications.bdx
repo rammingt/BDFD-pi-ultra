@@ -1,0 +1,170 @@
+@name appgate
+@type snippet
+$c[Applications hold what people wrote about themselves, so the role that decides them decides who reads them.]
+$ephemeral
+$onlyIf[$aesuAllowed[group]==yes;$if[$aesuRole[group]==;You do not have permission to do that.;Only $aesuRole[group] can read applications.]]
+---
+@name applications list
+@type slash
+@parent Browse every application the form has received.
+@description Every application in the form, newest first.
+@option search:string:Only ones whose answers contain this.
+@option page:integer:Which page to open on.
+$include[appgate]
+$var[r;$appList[$message[search];$message[page]]]
+$onlyIf[$var[r]==ok;$json[error]]
+$include[applist]
+---
+@name aesu:app_page
+@type button
+$c[Previous and Next on the list. $message[1] is the page counted from 0, and the rest is the search.]
+$include[appgate]
+$updateMessage
+$var[search;$replaceText[$customID;aesu:app_page:$message[1]:;;1]]
+$var[r;$appList[$var[search];$sum[$message[1];1]]]
+$onlyIf[$var[r]==ok;$json[error]]
+$include[applist]
+---
+@name applist
+@type snippet
+$c[One page of the list, from $appList's JSON.]
+$addContainer[list]
+$addTextDisplay[### $if[$json[search]==;Applications;Applications matching "$json[search]"]]
+$if[$json[total]==0]
+$addTextDisplay[$if[$json[search]==;The responses tab is empty. Check `APPLICATION_TAB` matches the real tab name.;Nothing matches that. The search looks at the answers, not the questions.]]
+$else
+$addTextDisplay[$jsonList[applications;{line}{unseen}]]
+$addTextDisplay[-# $json[from] to $json[to] of $json[total]$if[$json[pages]>1; · page $json[page]/$json[pages]] · /applications post <number> to put one in the channel]
+$if[$json[pages]>1]
+$addButton[yes;aesu:app_page:$json[previous]:$json[search];Previous;secondary;$json[atStart]]
+$addButton[no;aesu:app_page:$json[next]:$json[search];Next;secondary;$json[atEnd]]
+$endif
+$endif
+$closeContainer
+---
+@name applications post
+@type slash
+@description Put an application in the applications channel, with Accept and Deny buttons.
+@option number:integer:Its number from /applications list.:required
+@option to:integer:Post a range, up to this number.
+$include[appgate]
+$var[r;$appPost[$message[number];$message[to]]]
+$if[$var[r]==partial]
+$stop[Posted $json[sent] of $json[wanted]. Check the bot can send messages in <#$json[channelId]>.]
+$endif
+$onlyIf[$var[r]==ok;$json[error]]
+Posted $json[sent] application(s) to <#$json[channelId]>$if[$json[title]!=;: **$json[title]**;.]
+---
+@name application
+@type hook
+$c[A new application in APPLICATION_CHANNEL_ID. Redrawn with decided = yes once somebody accepts or denies it.]
+$addContainer[card]
+$addTextDisplay[### $json[title]$if[$json[lead]!=;
+$json[lead]]]
+$addSeparator
+$addTextDisplay[$jsonList[answers;**{question}**
+{answer};;\n\n]]
+$if[$json[hiddenCount]>0]
+$addTextDisplay[$json[hiddenCount] further answer(s) in the sheet.]
+$endif
+$if[$json[decided]==yes]
+$addSeparator
+$addTextDisplay[**$if[$json[accepted]==yes;Accepted;Denied]** by <@$json[decidedBy]>$if[$json[reason]!=;
+$json[reason]]$if[$json[note]!=;
+$json[note]]]
+$else
+$addButton[yes;aesu:app_accept:$json[args];Accept;success]
+$addButton[no;aesu:app_deny:$json[args];Deny;danger]
+$if[$json[canCheck]==yes]
+$addButton[no;aesu:app_check:$json[args];Background check;secondary]
+$endif
+$endif
+$addTextDisplay[-# Application #$json[row]$if[$json[submitted]!=; · $json[submitted]]]
+$closeContainer
+---
+@name aesu:app_accept
+@type button
+$c[Opens the reason form. Checked here, because a form has to be the first answer.]
+$include[appgate]
+$var[r;$appCard]
+$onlyIf[$var[r]==ok;$json[error]]
+$showModal[aesu:app_accept:$message[1]:$message[2]:$message[3];Accept application]
+$addTextInput[reason;Reason (optional);paragraph;no;Anything you want them told. Leave blank for just the good news.;;;500]
+---
+@name aesu:app_deny
+@type button
+$include[appgate]
+$var[r;$appCard]
+$onlyIf[$var[r]==ok;$json[error]]
+$showModal[aesu:app_deny:$message[1]:$message[2]:$message[3];Deny application]
+$addTextInput[reason;Reason for denial;paragraph;yes;They are sent this, so write it to be read by them.;;;500]
+---
+@name aesu:app_accept
+@type modal
+$c[The reason form coming back. Acts on the group, redraws the card and tells the applicant.]
+$include[appgate]
+$var[r;$appDecide[accept;$message[1];$message[2];$message[3];$input[reason]]]
+$onlyIf[$var[r]==ok;$json[error]]
+Application accepted. $json[note] $json[dmNote]
+---
+@name aesu:app_deny
+@type modal
+$include[appgate]
+$var[r;$appDecide[deny;$message[1];$message[2];$message[3];$input[reason]]]
+$onlyIf[$var[r]==ok;$json[error]]
+Application denied. $json[note] $json[dmNote]
+---
+@name application decision
+@type hook
+$c[DMed to the applicant. Says nothing about Roblox, since whether a join request was waiting is not known here.]
+$addContainer[decision]
+$if[$json[accepted]==yes]
+$addTextDisplay[### Your application was accepted
+Welcome$if[$json[guildName]!=; to **$json[guildName]**].]
+$else
+$addTextDisplay[### Your application was not accepted
+Thank you for applying$if[$json[guildName]!=; to **$json[guildName]**]. On this occasion your application was not successful.]
+$endif
+$if[$json[reason]!=]
+$addTextDisplay[**Reason**
+$json[reason]]
+$endif
+$if[$json[accepted]==no]
+$if[$json[formUrl]!=]
+$addTextDisplay[**Applying again**
+$json[formUrl]]
+$endif
+$endif
+$closeContainer
+---
+@name aesu:app_check
+@type button
+$c[Runs the applicant through RoVuew. Private to whoever asked: it is somebody's record, and the channel may not be staff only.]
+$ephemeral
+$onlyIf[$aesuAllowed[group]==yes;You do not have permission to run a background check.]
+$var[r;$appCheck[$message[2];$message[3]]]
+$onlyIf[$var[r]==ok;$json[error]]
+$addContainer[check]
+$addTextDisplay[### Background check: $json[username]
+$if[$json[flagged]==yes;**Something was found.** Read it before deciding.;$if[$json[incomplete]==yes;**Nothing found, but not everything answered.** Treat this as a partial all clear.;**Nothing found.**]]]
+$if[$json[private]==yes]
+$addTextDisplay[**Inventory is private**
+Their items could not be read, so only the reputation checks below ran.]
+$endif
+$if[$jsonCount[sections]>0]
+$addSeparator
+$addTextDisplay[$jsonList[sections;**{title}**
+{lines};;\n\n]]
+$endif
+$if[$json[reputation]!=]
+$addSeparator
+$addTextDisplay[**Reputation**
+$json[reputation]]
+$endif
+$if[$json[appeals]!=]
+$addTextDisplay[**Appeals**
+$json[appeals]]
+$endif
+$addTextDisplay[-# Roblox $json[userId]$if[$json[discordId]!=; · Discord $json[discordId]; · no Discord id, so Discord side checks were skipped]$if[$json[score]!=; · score $json[score]]]
+$closeContainer
+$addButton[yes;$json[profile];Roblox profile;link]

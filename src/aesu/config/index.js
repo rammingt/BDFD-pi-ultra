@@ -44,11 +44,6 @@ function idList(name) {
   return [...new Set(ids)];
 }
 
-const localRovuew = (() => {
-  const key = (process.env.ROVUEW_API_KEYS || '').split(',').map((k) => k.trim()).find(Boolean);
-  return key ? { key, port: Number(process.env.ROVUEW_API_PORT) || 3001 } : null;
-})();
-
 const publicBaseUrl = str('PUBLIC_BASE_URL').replace(/\/+$/, '');
 
 /** Also the fallback if SHIFT_TYPES is set to something unusable. */
@@ -168,11 +163,11 @@ const config = {
   },
   rovuew: {
     /** Where the RoVuew inventory checker lives. Override only for a local instance. */
-    // RoVuew runs inside BDX now, so its own API on this machine is the default
-    // whenever ROVUEW_API_KEYS turns it on.
-    baseUrl: str('ROVUEW_BASE_URL', localRovuew ? `http://127.0.0.1:${localRovuew.port}` : 'https://api.rovuew.xyz'),
+    // RoVuew runs inside BDX now and is asked directly. Set this only to use one
+    // running somewhere else.
+    baseUrl: str('ROVUEW_BASE_URL'),
     /** One of the keys in RoVuew's own API_KEYS list. */
-    apiKey: str('ROVUEW_API_KEY', localRovuew?.key ?? ''),
+    apiKey: str('ROVUEW_API_KEY'),
   },
   legal: {
     /** Shown on the privacy and terms pages so people can get in touch. */

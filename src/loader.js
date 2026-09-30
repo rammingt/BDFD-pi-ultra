@@ -10,7 +10,9 @@
 //   @aliases p, pong
 //   @description Check the bot latency
 //   @option user:user:Who to check:required     (slash options: name:type:description[:required][:choices])
+//                             write \: for a colon inside a description
 //                             choices look like  badge=Badge|accessory=Accessory
+//                             or "from name" for a list that comes from settings (see src/choices.js)
 //   @name flag add            a space makes a slash subcommand: /flag add
 //   @parent Manage flags      description for the /flag group (optional)
 //
@@ -51,10 +53,13 @@ function parseCommand(chunk, fallbackName, file, registry) {
       case 'every': cmd.every = value.trim(); break;
       case 'parent': cmd.parent = value.trim().slice(0, 100); break;
       case 'option': {
-        const [name, type = 'string', description = name, req = '', choices = ''] = value.split(':').map((s) => s.trim());
+        // "\:" is a colon inside a field, like a time in a description
+        const [name, type = 'string', description = name, req = '', choices = ''] = value.split(/(?<!\\):/).map((s) => s.replace(/\\:/g, ':').trim());
+        const from = /^from\s+(\w+)$/i.exec(choices);
         cmd.options.push({
           name: name.toLowerCase(), type: type.toLowerCase(), description, required: req.toLowerCase() === 'required',
-          choices: choices ? choices.split('|').map((c) => { const [v, label = v] = c.split('=').map((x) => x.trim()); return { value: v, name: label }; }) : [],
+          choices: choices && !from ? choices.split('|').map((c) => { const [v, label = v] = c.split('=').map((x) => x.trim()); return { value: v, name: label }; }) : [],
+          choicesFrom: from ? from[1] : null,
         });
         break;
       }

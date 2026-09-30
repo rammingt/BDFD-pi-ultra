@@ -12,8 +12,46 @@ const COOLDOWN_SECONDS = 20;
 
 /** The subset of RoVuew's /fullcheck payload this bot reads. */
 
+/** RoVuew is part of BDX, so a background check can always run. */
 function isRovuewConfigured() {
+  return true;
+}
+
+function isRemote() {
   return Boolean(config.rovuew.baseUrl && config.rovuew.apiKey);
+}
+
+/** The flagged item from a match, whichever way RoVuew wrapped it. */
+function flatten(match) {
+  const flag = match?.flag ?? match ?? {};
+  let score = flag.score;
+  try { score = require('../../rovuew/storage').flagScore(flag); } catch { /* not a flag entry */ }
+  return {
+    name: flag.name ?? match?.name,
+    assetId: flag.assetId ?? match?.assetId,
+    score: typeof score === 'number' ? score : match?.score,
+    reason: flag.reason ?? (Array.isArray(match?.reasons) ? match.reasons.join('; ') : match?.reason),
+  };
+}
+
+/** Matches come back as { flag }, which the report wants as plain items. */
+function normalise(result) {
+  const out = { ...result };
+  for (const key of ['accessoryMatches', 'clothingMatches', 'badgeMatches', 'autoMatches']) {
+    if (Array.isArray(result[key])) out[key] = result[key].map(flatten);
+  }
+  return out;
+}
+
+/** Runs the check in this process, with the flag list BDX already has. */
+async function localCheck(robloxUser, discordUserId) {
+  try {
+    const result = await require('../../rovuew/checkService').fullCheck(robloxUser, { discordUserId });
+    if (result.error === 'user_not_found') return { status: 'not_found' };
+    return { status: 'ok', result: normalise(result) };
+  } catch (error) {
+    return { status: 'failed', reason: `The check failed: ${error instanceof Error ? error.message : String(error)}` };
+  }
 }
 
 /**
@@ -27,7 +65,7 @@ async function fullCheck(
   robloxUser,
   discordUserId = null,
 ) {
-  if (!isRovuewConfigured()) return { status: 'off' };
+  if (!isRemote()) return localCheck(robloxUser, discordUserId);
 
   const base = config.rovuew.baseUrl.replace(/\/+$/, '');
   const query = discordUserId ? `?discord=${encodeURIComponent(discordUserId)}` : '';
@@ -44,7 +82,7 @@ async function fullCheck(
       retries: 0,
     });
 
-    return { status: 'ok', result: (await response.json()) };
+    return { status: 'ok', result: normalise(await response.json()) };
   } catch (error) {
     if (!(error instanceof HttpError)) {
       // Name the address as well as the reason: the usual cause is ROVUEW_BASE_URL
