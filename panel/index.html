@@ -210,6 +210,11 @@ dialog input, dialog select { width: 100%; margin-top: 6px; }
 #scrim { display: none; }
 
 @media (max-width: 760px) {
+  /* every page button visible on phones: the menu wraps instead of scrolling sideways */
+  header { flex-wrap: wrap; row-gap: 4px; }
+  nav { order: 3; flex-basis: 100%; flex-wrap: wrap; overflow: visible; }
+  nav button { padding: 6px 10px; }
+  .status { margin-left: auto; }
   #v-commands { grid-template-columns: 1fr; }
   #files { position: fixed; inset: 0 auto 0 0; width: 82%; max-width: 300px; z-index: 40; transform: translateX(-100%); transition: transform .2s; padding-top: env(safe-area-inset-top); }
   #files.open { transform: none; }
