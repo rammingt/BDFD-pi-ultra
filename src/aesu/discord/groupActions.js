@@ -57,7 +57,7 @@ function describeUser(target) {
 }
 
 function describeRole(role) {
-  return `**${role.name}** (rank ${role.rank})`;
+  return `${role.name} (rank ${role.rank})`;
 }
 
 /**

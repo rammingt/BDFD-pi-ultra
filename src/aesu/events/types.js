@@ -59,7 +59,7 @@ function parseRoles(input) {
     const key = slugify(label);
     if (!key) throw new EventInputError(`\`${label}\` needs at least one letter or number in it.`);
     if (key === DECLINED_ROLE_KEY) {
-      throw new EventInputError(`\`${label}\` clashes with the built-in **${DECLINED_LABEL}** option. Pick another name.`);
+      throw new EventInputError(`\`${label}\` clashes with the built-in ${DECLINED_LABEL} option. Pick another name.`);
     }
     if (seen.has(key)) throw new EventInputError(`\`${label}\` is listed twice.`);
 

@@ -20,7 +20,7 @@ describe('shift commands in BDX', () => {
   it('arms Start once a type is picked', async () => {
     const r = await h.run('aesu:panel_type', { selectValues: ['shift_guard'] });
     assert.equal(r.update, true);
-    assert.match(h.text(r), /Selected \*\*Shift Guard\*\*/);
+    assert.match(h.text(r), /Selected Shift Guard/);
     const start = h.buttons(r).find((b) => b.custom_id?.startsWith('aesu:panel_start'));
     assert.equal(start.custom_id, 'aesu:panel_start:shift_guard');
     assert.equal(start.disabled, false);
@@ -46,10 +46,10 @@ describe('shift commands in BDX', () => {
 
     r = await h.run('aesu:panel_end');
     assert.equal(r.stopped, false, r.content);
-    assert.match(h.text(r), /Shift ended\. \*\*\d+s\*\* banked on your Shift Guard and 0s on break\./);
+    assert.match(h.text(r), /Shift ended\. \d+s banked on your Shift Guard and 0s on break\./);
     assert.equal(h.client.sent.length, 1, 'the log entry is edited, not posted again');
     assert.ok(h.client.edits.length >= 3);
-    assert.match(h.text({ content: '', layout: h.client.edits.at(-1).payload.components }), /Closed by:\*\* Ended from the panel/);
+    assert.match(h.text({ content: '', layout: h.client.edits.at(-1).payload.components }), /Closed by: Ended from the panel/);
   });
 
   it('refuses a break with nothing running', async () => {
@@ -61,11 +61,11 @@ describe('shift commands in BDX', () => {
   it('lists history and totals', async () => {
     let r = await h.run('shift', { options: { action: 'history' } });
     assert.equal(r.stopped, false, r.content);
-    assert.match(h.text(r), /\*\*\d+s\*\* · Shift Guard/);
+    assert.match(h.text(r), /\d+s · Shift Guard/);
     r = await h.run('checktime', { options: { range: 'week' } });
     assert.equal(r.stopped, false, r.content);
-    assert.match(h.text(r), /\*\*Shifts:\*\* 1/);
-    assert.match(h.text(r), /Range: \*\*Last 7 days\*\*/);
+    assert.match(h.text(r), /Shifts: 1/);
+    assert.match(h.text(r), /Range: Last 7 days/);
     assert.equal(r.ephemeral, true);
   });
 
@@ -94,10 +94,10 @@ describe('shift commands in BDX', () => {
     assert.equal(r.content, 'Nothing was logged. Run `/shift action:manage` if you change your mind.');
   });
 
-  it('explains that linking is not set up', async () => {
+  it('asks for a username when Bloxlink has nothing', async () => {
     const r = await h.run('connect', { options: {} });
     assert.equal(r.stopped, true);
-    assert.match(r.content, /not configured/);
+    assert.match(r.content, /Run \/connect again with your Roblox username/);
     const d = await h.run('disconnect', { options: {} });
     assert.equal(d.content, 'You do not have a Roblox account linked.');
   });

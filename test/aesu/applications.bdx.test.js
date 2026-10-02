@@ -26,7 +26,7 @@ describe('application commands in BDX', () => {
     assert.equal(r.stopped, false, r.content);
     const lines = h.text(r).split('\n').filter((line) => line.startsWith('`#'));
     assert.equal(lines.length, 10);
-    assert.match(lines[0], /^`#23` \*\*applicant_23\*\*.*never posted/);
+    assert.match(lines[0], /^`#23` applicant_23.*never posted/);
     assert.ok(!/never posted/.test(lines[3]), '#20 was the last one posted');
     assert.match(h.text(r), /1 to 10 of 23 · page 1\/3/);
     const [prev, next] = h.buttons(r);
@@ -40,7 +40,7 @@ describe('application commands in BDX', () => {
     assert.match(h.text(r), /11 to 20 of 23 · page 2\/3/);
     r = await h.run('aesu:app_page', { args: ['0', 'dams'], roles: ['333'] });
     assert.match(h.text(r), /Applications matching "dams"/);
-    assert.match(h.text(r), /`#1` \*\*applicant_1\*\* <@123456789012345678>/);
+    assert.match(h.text(r), /`#1` applicant_1 <@123456789012345678>/);
     r = await h.run('aesu:app_page', { args: ['0', 'no', 'such'], roles: ['333'] });
     assert.match(h.text(r), /matching "no:such"/);
     assert.match(h.text(r), /Nothing matches that/);
@@ -49,11 +49,11 @@ describe('application commands in BDX', () => {
   it('posts a card with the buttons carrying who it is', async () => {
     const r = await h.run('applications', { options: { action: 'post', number: '1' }, roles: ['333'] });
     assert.equal(r.stopped, false, r.content);
-    assert.equal(r.content, 'Posted 1 application(s) to <#700000000000000011>: **applicant_1**');
+    assert.equal(r.content, 'Posted 1 application(s) to <#700000000000000011>: applicant_1');
     const card = h.client.sent.at(-1);
     h.card = card;
     assert.match(h.text({ layout: card.payload.components }), /### applicant_1\n<@123456789012345678>/);
-    assert.match(h.text({ layout: card.payload.components }), /\*\*Why do you want to join\?\*\*\nI like dams\./);
+    assert.match(h.text({ layout: card.payload.components }), /Why do you want to join\?\nI like dams\./);
     const ids = h.buttons({ layout: card.payload.components }).map((b) => b.custom_id);
     assert.deepEqual(ids, ['aesu:app_accept:1:applicant_1:123456789012345678', 'aesu:app_deny:1:applicant_1:123456789012345678', 'aesu:app_check:1:applicant_1:123456789012345678']);
   });
@@ -70,9 +70,9 @@ describe('application commands in BDX', () => {
     assert.match(r.content, /^Application denied\. Group management is off, so only the card was updated\. They have been told by DM\.$/);
     const dm = h.client.dms.at(-1);
     assert.equal(dm.userId, '123456789012345678');
-    assert.match(h.text({ layout: dm.payload.components }), /not accepted[\s\S]*Too young\.\n\*\*Applying again\*\*\nhttps:\/\/forms\.example\/apply/);
+    assert.match(h.text({ layout: dm.payload.components }), /not accepted[\s\S]*Too young\.\nApplying again\nhttps:\/\/forms\.example\/apply/);
     const redrawn = h.client.edits.at(-1);
-    assert.match(h.text({ layout: redrawn.payload.components }), /\*\*Denied\*\* by <@100000000000000001>\nToo young\./);
+    assert.match(h.text({ layout: redrawn.payload.components }), /Denied by <@100000000000000001>\nToo young\./);
     assert.equal(h.buttons({ layout: redrawn.payload.components }).length, 0);
 
     r = await h.run('aesu:app_accept', { type: 'button', args, roles: ['333'], messageId: h.card.id, channelId: h.card.channelId });

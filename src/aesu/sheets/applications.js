@@ -83,7 +83,7 @@ function applicationLine(application) {
   const when = application.submittedAt
     ? ` · <t:${Math.floor(application.submittedAt.getTime() / 1000)}:R>`
     : '';
-  return `\`#${application.rowIndex}\` **${applicationTitle(application).slice(0, 60)}**${mention ? ` ${mention}` : ''}${when}`;
+  return `\`#${application.rowIndex}\` ${applicationTitle(application).slice(0, 60)}${mention ? ` ${mention}` : ''}${when}`;
 }
 
 /**

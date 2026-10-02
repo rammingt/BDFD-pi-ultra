@@ -11,8 +11,8 @@ const { fetchPresences, PresenceType } = require('./presence');
 
 const VISIBILITY_HINT =
   'Roblox is not telling the bot which game you are in, so your shifts and event attendance cannot be ' +
-  'tracked. On the Roblox account you play on, open **Settings > Privacy** and set ' +
-  '**Who can see my join status** to **Everyone**. Adding the tracking account as a friend works too.';
+  'tracked. On the Roblox account you play on, open Settings > Privacy and set ' +
+  'Who can see my join status to Everyone. Adding the tracking account as a friend works too.';
 
 const CACHE_TTL_MS = 60_000;
 const cache = new Map();

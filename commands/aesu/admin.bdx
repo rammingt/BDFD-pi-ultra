@@ -1,7 +1,7 @@
 @name admin
 @type slash
 @description End shifts and events, and correct banked time.
-@option action:string:What to do.:required:panel=Panel\: Who is on shift, what is running, and the controls for both.|endshift=Endshift\: End somebody's shift for them. The time so far is banked.|endevent=Endevent\: End an event now and bank everybody's attendance.|addtime=Addtime\: Add banked time to somebody, on one shift type.|removetime=Removetime\: Take banked time off somebody, on one shift type.
+@option action:string:What to do.:required:panel=Panel|endshift=End shift|endevent=End event|addtime=Add time|removetime=Remove time
 @option user:user:Whose shift to end.
 @option event:string:Event id, from /event action:list.
 @option type:string:Which shift type it counts as.::from shiftTypes
@@ -22,10 +22,10 @@ $include[adminpanel]
 $c[The admin panel, from $adminPanel's JSON. Shared by the command, the menus and Refresh.]
 $addContainer[admin]
 $addTextDisplay[### Administrator panel]
-$addTextDisplay[**On shift ($json[shiftCount])**
+$addTextDisplay[On shift ($json[shiftCount])
 $if[$json[shiftCount]==0;Nobody is on shift.;$jsonList[shifts;{mention} · {typeLabel}, {worked}{onBreak}]]]
-$addTextDisplay[**Events ($json[eventCount])**
-$if[$json[eventCount]==0;No events scheduled or running.;$jsonList[events;**{name}** · {when}, hosted by {host}]]]
+$addTextDisplay[Events ($json[eventCount])
+$if[$json[eventCount]==0;No events scheduled or running.;$jsonList[events;{name} · {when}, hosted by {host}]]]
 $if[$json[shiftCount]>0]
 $addSelectMenu[aesu:admin_end_shift;End somebody's shift]
 $addSelectOptions[shifts;{label};{discordId};{description}]
@@ -53,7 +53,7 @@ $var[r;$adminEndShift[$selectedValues]]
 $if[$var[r]==denied]
 $stop[$json[error]]
 $endif
-$var[outcome;$if[$var[r]==ok;Ended <@$json[discordId]>'s shift, **$json[banked]** banked.;$json[error]]]
+$var[outcome;$if[$var[r]==ok;Ended <@$json[discordId]>'s shift, $json[banked] banked.;$json[error]]]
 $var[r;$adminPanel]
 $var[outcome]
 $include[adminpanel]
@@ -65,7 +65,7 @@ $var[r;$adminEndEvent[$selectedValues]]
 $if[$var[r]==denied]
 $stop[$json[error]]
 $endif
-$var[outcome;$if[$var[r]==ok;Ended the event **$json[name]**, $json[banked] logged.;$json[error]]]
+$var[outcome;$if[$var[r]==ok;Ended the event $json[name], $json[banked] logged.;$json[error]]]
 $var[r;$adminPanel]
 $var[outcome]
 $include[adminpanel]
@@ -73,45 +73,45 @@ $include[adminpanel]
 @name admin_endshift
 @type snippet
 $c[/admin action:endshift. End somebody's shift for them. The time so far is banked.]
-$onlyIf[$message[user]!=;Fill in the **user** option for /admin action:endshift.]
+$onlyIf[$message[user]!=;Fill in the user option for /admin action:endshift.]
 $ephemeral
 $var[r;$adminEndShift[$message[user]]]
 $if[$var[r]==notonshift]
 $stop[<@$message[user]> is not on shift.]
 $endif
 $onlyIf[$var[r]==ok;$json[error]]
-Ended <@$json[discordId]>'s $json[typeLabel]. **$json[banked]** banked.
+Ended <@$json[discordId]>'s $json[typeLabel]. $json[banked] banked.
 ---
 @name admin_endevent
 @type snippet
 $c[/admin action:endevent. End an event now and bank everybody's attendance.]
-$onlyIf[$message[event]!=;Fill in the **event** option for /admin action:endevent.]
+$onlyIf[$message[event]!=;Fill in the event option for /admin action:endevent.]
 $ephemeral
 $var[r;$adminEndEvent[$message[event]]]
 $onlyIf[$var[r]==ok;$json[error]]
-**$json[name]** is closed. $json[banked] attendee(s) had their time logged.
+$json[name] is closed. $json[banked] attendee(s) had their time logged.
 ---
 @name admin_addtime
 @type snippet
 $c[/admin action:addtime. Add banked time to somebody, on one shift type.]
-$onlyIf[$message[user]!=;Fill in the **user** option for /admin action:addtime.]
-$onlyIf[$message[type]!=;Fill in the **type** option for /admin action:addtime.]
-$onlyIf[$message[time]!=;Fill in the **time** option for /admin action:addtime.]
+$onlyIf[$message[user]!=;Fill in the user option for /admin action:addtime.]
+$onlyIf[$message[type]!=;Fill in the type option for /admin action:addtime.]
+$onlyIf[$message[time]!=;Fill in the time option for /admin action:addtime.]
 $ephemeral
 $var[r;$adminAdjust[add;$message[user];$message[type];$message[time]]]
 $onlyIf[$var[r]==ok;$json[error]]
-**$json[signed]** of $json[typeLabel] for <@$json[discordId]>. They now have **$json[after]** of it.
+$json[signed] of $json[typeLabel] for <@$json[discordId]>. They now have $json[after] of it.
 ---
 @name admin_removetime
 @type snippet
 $c[/admin action:removetime. Take banked time off somebody, on one shift type.]
-$onlyIf[$message[user]!=;Fill in the **user** option for /admin action:removetime.]
-$onlyIf[$message[type]!=;Fill in the **type** option for /admin action:removetime.]
-$onlyIf[$message[time]!=;Fill in the **time** option for /admin action:removetime.]
+$onlyIf[$message[user]!=;Fill in the user option for /admin action:removetime.]
+$onlyIf[$message[type]!=;Fill in the type option for /admin action:removetime.]
+$onlyIf[$message[time]!=;Fill in the time option for /admin action:removetime.]
 $ephemeral
 $var[r;$adminAdjust[remove;$message[user];$message[type];$message[time]]]
 $onlyIf[$var[r]==ok;$json[error]]
-**$json[signed]** of $json[typeLabel] for <@$json[discordId]>. They now have **$json[after]** of it.
+$json[signed] of $json[typeLabel] for <@$json[discordId]>. They now have $json[after] of it.
 ---
 @name admin log
 @type hook

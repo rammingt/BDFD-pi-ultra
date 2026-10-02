@@ -40,7 +40,7 @@ function explainRoleError(error, guild, what = 'duty roles') {
   if (error instanceof DiscordAPIError) {
     if (error.code === 50013) {
       return (
-        `The bot needs **Manage Roles** in ${guild.name}, and its own role has to sit above the ${what} ` +
+        `The bot needs Manage Roles in ${guild.name}, and its own role has to sit above the ${what} ` +
         'in Server Settings > Roles.'
       );
     }

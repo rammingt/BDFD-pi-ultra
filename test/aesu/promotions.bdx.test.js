@@ -26,10 +26,10 @@ describe('promotion commands in BDX', () => {
     assert.equal(r.stopped, false, r.content);
     const text = h.text(r);
     assert.match(text, /### Promotion to Guard/);
-    assert.match(text, /Currently \*\*Recruit\*\*/);
+    assert.match(text, /Currently Recruit/);
     assert.match(text, /Run `\/promote action:request` to promote\./);
-    assert.match(text, /✅ \*\*.+\*\*\n`████████████` 2h 30m \/ 2h/);
-    assert.match(text, /\*\*General requirements\*\*\n• Pass the exam/);
+    assert.match(text, /✅ .+\n`████████████` 2h 30m \/ 2h/);
+    assert.match(text, /General requirements\n• Pass the exam/);
   });
 
   it('posts a request card for staff, pinging their role', async () => {
@@ -49,10 +49,10 @@ describe('promotion commands in BDX', () => {
     assert.equal(r.content, 'Only <@&444> can decide promotions.');
     r = await h.run('aesu:promote_ok', { args: [ME, '20'], messageId: h.card.id, channelId: h.card.channelId, roles: ['444'] });
     assert.equal(r.stopped, false, r.content);
-    assert.match(r.content, /is now \*\*Guard\*\*/);
+    assert.match(r.content, /is now Guard/);
     assert.deepEqual(applied, [[ME, 'Guard']]);
     const redrawn = h.client.edits.at(-1);
-    assert.match(h.text({ layout: redrawn.payload.components }), /\*\*Approved\*\* by <@100000000000000001>\nSet to \*\*Guard\*\*/);
+    assert.match(h.text({ layout: redrawn.payload.components }), /Approved by <@100000000000000001>\nSet to Guard/);
     assert.equal(h.buttons({ layout: redrawn.payload.components }).length, 0);
     r = await h.run('aesu:promote_no', { args: [ME, '20'], messageId: h.card.id, channelId: h.card.channelId, roles: ['444'] });
     assert.equal(r.content, 'That request has already been decided.');
@@ -61,6 +61,6 @@ describe('promotion commands in BDX', () => {
   it('lists the ranks', async () => {
     const r = await h.run('promote', { options: { action: 'ranks' } });
     assert.equal(r.stopped, false, r.content);
-    assert.match(h.text(r), /` 20` \*\*Guard\*\* \(needs approval · 2 member\(s\)\)\n2h of Shift Guard, 1 event hosted/);
+    assert.match(h.text(r), /` 20` Guard \(needs approval · 2 member\(s\)\)\n2h of Shift Guard, 1 event hosted/);
   });
 });

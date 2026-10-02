@@ -200,6 +200,8 @@ Each area is one slash command with an `action` option (`/group action:promote p
 
 The folder only loads while `AESU_ENABLED=yes`. The panel's **Shifts** page shows who is on shift (and can end a shift), and brings the old tracker's settings over in one paste.
 
+Linking no longer uses Roblox's sign in page. `/connect` asks Bloxlink who the member is and they confirm it. If Bloxlink doesn't know them, they run `/connect username:...` and prove the account is theirs by putting a short code in their Roblox profile About. The Bloxlink key is read from Verify's settings, or set `BLOXLINK_KEY` and `BLOXLINK_GUILD_ID`.
+
 Button IDs are the same as the old tracker's, so buttons on posts the old bot already made keep working if BDX logs in as that same bot. Background checks now go straight to the RoVuew inside BDX.
 
 ### Moving over from the old tracker

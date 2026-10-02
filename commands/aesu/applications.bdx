@@ -7,7 +7,7 @@ $onlyIf[$aesuAllowed[group]==yes;$if[$aesuRole[group]==;You do not have permissi
 @name applications
 @type slash
 @description Browse every application the form has received.
-@option action:string:What to do.:required:list=List\: Every application in the form, newest first.|post=Post\: Put an application in the applications channel, with Accept and Deny buttons.
+@option action:string:What to do.:required:list=List|post=Post
 @option search:string:Only ones whose answers contain this.
 @option page:integer:Which page to open on.
 @option number:integer:Its number from /applications action:list.
@@ -53,14 +53,14 @@ $closeContainer
 @name applications_post
 @type snippet
 $c[/applications action:post. Put an application in the applications channel, with Accept and Deny buttons.]
-$onlyIf[$message[number]!=;Fill in the **number** option for /applications action:post.]
+$onlyIf[$message[number]!=;Fill in the number option for /applications action:post.]
 $include[appgate]
 $var[r;$appPost[$message[number];$message[to]]]
 $if[$var[r]==partial]
 $stop[Posted $json[sent] of $json[wanted]. Check the bot can send messages in <#$json[channelId]>.]
 $endif
 $onlyIf[$var[r]==ok;$json[error]]
-Posted $json[sent] application(s) to <#$json[channelId]>$if[$json[title]!=;: **$json[title]**;.]
+Posted $json[sent] application(s) to <#$json[channelId]>$if[$json[title]!=;: $json[title];.]
 ---
 @name application
 @type hook
@@ -69,14 +69,14 @@ $addContainer[card]
 $addTextDisplay[### $json[title]$if[$json[lead]!=;
 $json[lead]]]
 $addSeparator
-$addTextDisplay[$jsonList[answers;**{question}**
+$addTextDisplay[$jsonList[answers;{question}
 {answer};;\n\n]]
 $if[$json[hiddenCount]>0]
 $addTextDisplay[$json[hiddenCount] further answer(s) in the sheet.]
 $endif
 $if[$json[decided]==yes]
 $addSeparator
-$addTextDisplay[**$if[$json[accepted]==yes;Accepted;Denied]** by <@$json[decidedBy]>$if[$json[reason]!=;
+$addTextDisplay[$if[$json[accepted]==yes;Accepted;Denied] by <@$json[decidedBy]>$if[$json[reason]!=;
 $json[reason]]$if[$json[note]!=;
 $json[note]]]
 $else
@@ -127,18 +127,18 @@ $c[DMed to the applicant. Says nothing about Roblox, since whether a join reques
 $addContainer[decision]
 $if[$json[accepted]==yes]
 $addTextDisplay[### Your application was accepted
-Welcome$if[$json[guildName]!=; to **$json[guildName]**].]
+Welcome$if[$json[guildName]!=; to $json[guildName]].]
 $else
 $addTextDisplay[### Your application was not accepted
-Thank you for applying$if[$json[guildName]!=; to **$json[guildName]**]. On this occasion your application was not successful.]
+Thank you for applying$if[$json[guildName]!=; to $json[guildName]]. On this occasion your application was not successful.]
 $endif
 $if[$json[reason]!=]
-$addTextDisplay[**Reason**
+$addTextDisplay[Reason
 $json[reason]]
 $endif
 $if[$json[accepted]==no]
 $if[$json[formUrl]!=]
-$addTextDisplay[**Applying again**
+$addTextDisplay[Applying again
 $json[formUrl]]
 $endif
 $endif
@@ -153,23 +153,23 @@ $var[r;$appCheck[$message[2];$message[3]]]
 $onlyIf[$var[r]==ok;$json[error]]
 $addContainer[check]
 $addTextDisplay[### Background check: $json[username]
-$if[$json[flagged]==yes;**Something was found.** Read it before deciding.;$if[$json[incomplete]==yes;**Nothing found, but not everything answered.** Treat this as a partial all clear.;**Nothing found.**]]]
+$if[$json[flagged]==yes;Something was found. Read it before deciding.;$if[$json[incomplete]==yes;Nothing found, but not everything answered. Treat this as a partial all clear.;Nothing found.]]]
 $if[$json[private]==yes]
-$addTextDisplay[**Inventory is private**
+$addTextDisplay[Inventory is private
 Their items could not be read, so only the reputation checks below ran.]
 $endif
 $if[$jsonCount[sections]>0]
 $addSeparator
-$addTextDisplay[$jsonList[sections;**{title}**
+$addTextDisplay[$jsonList[sections;{title}
 {lines};;\n\n]]
 $endif
 $if[$json[reputation]!=]
 $addSeparator
-$addTextDisplay[**Reputation**
+$addTextDisplay[Reputation
 $json[reputation]]
 $endif
 $if[$json[appeals]!=]
-$addTextDisplay[**Appeals**
+$addTextDisplay[Appeals
 $json[appeals]]
 $endif
 $addTextDisplay[-# Roblox $json[userId]$if[$json[discordId]!=; · Discord $json[discordId]; · no Discord id, so Discord side checks were skipped]$if[$json[score]!=; · score $json[score]]]

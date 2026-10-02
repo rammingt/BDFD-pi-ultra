@@ -89,9 +89,9 @@ module.exports = ({ need, fail, arg, num }) => {
         : `You have to be in one of the tracked games before you can start a ${label} shift.`;
     }
     const alternatives = anyGameTypeLabels();
-    return `You are in ${playing ? `**${playing}**` : 'a game'}, which is not one of the tracked games, `
+    return `You are in ${playing ? `${playing}` : 'a game'}, which is not one of the tracked games, `
       + `so it cannot be logged as a ${label} shift.`
-      + (alternatives.length > 0 ? ` Pick **${alternatives.join('** or **')}** if that is what you are running.` : '');
+      + (alternatives.length > 0 ? ` Pick ${alternatives.join(' or ')} if that is what you are running.` : '');
   }
 
   /**
@@ -209,7 +209,7 @@ module.exports = ({ need, fail, arg, num }) => {
       const channel = await resolveSendableChannel(client, channelId);
       if (!channel) {
         return refuse(ctx, 'no_channel', channelId
-          ? `I cannot post in <#${channelId}>. Give me **View Channel** and **Send Messages** there.`
+          ? `I cannot post in <#${channelId}>. Give me View Channel and Send Messages there.`
           : 'There is nowhere to post the event. Set `EVENT_CHANNEL_ID` or pass the `channel` option.');
       }
 
@@ -427,7 +427,7 @@ module.exports = ({ need, fail, arg, num }) => {
       if (approving && rank) {
         const applied = await ranks.apply(stripId(discordId), rank);
         if (!applied.ok) return refuse(ctx, 'failed', `Roblox refused that. ${applied.reason}`);
-        note = `Set to **${rank.name}** in the Roblox group.`;
+        note = `Set to ${rank.name} in the Roblox group.`;
       }
 
       const decision = { decided: 'yes', approved: approving ? 'yes' : 'no', decidedBy: ctx.author.id, note };
@@ -520,7 +520,7 @@ module.exports = ({ need, fail, arg, num }) => {
       // the fetch never answers, so check first.
       const { GatewayIntentBits } = require('discord.js');
       if (!client.options?.intents?.has?.(GatewayIntentBits.GuildMembers)) {
-        return refuse(ctx, 'nointent', 'Counting squads needs the **Server Members Intent**. Turn it on for this bot at <https://discord.com/developers/applications> under **Bot > Privileged Gateway Intents**.');
+        return refuse(ctx, 'nointent', 'Counting squads needs the Server Members Intent. Turn it on for this bot at <https://discord.com/developers/applications> under Bot > Privileged Gateway Intents.');
       }
       const members = await guild.members.fetch({ time: 20_000 }).catch(() => null);
       if (!members) return refuse(ctx, 'timeout', 'Discord did not send the member list in time. Try again in a moment.');
@@ -593,7 +593,7 @@ module.exports = ({ need, fail, arg, num }) => {
         const group = mod('roblox/group');
         const found = await groupTarget(player);
         const request = await group.getJoinRequest(found.user.id);
-        if (!request) return refuse(ctx, 'norequest', `**${found.user.name}** has no request waiting. They may already be in the group.`);
+        if (!request) return refuse(ctx, 'norequest', `${found.user.name} has no request waiting. They may already be in the group.`);
         if (accepting) await group.acceptJoinRequest(found.user.id);
         else await group.declineJoinRequest(found.user.id);
         await logAction(ctx, found, accepting ? 'Accepted into the group' : 'Declined');
@@ -615,10 +615,10 @@ module.exports = ({ need, fail, arg, num }) => {
           return refuse(ctx, 'nomatch', `No rank matches \`${wanted}\`. The group has: ${names.join(', ') || 'no ranks I can set'}.`);
         }
         if (!group.assignableRoles(roles).some((entry) => entry.id === role.id)) {
-          return refuse(ctx, 'locked', `**${role.name}** is not a rank I can hand out. Guest and the owner rank are off limits.`);
+          return refuse(ctx, 'locked', `${role.name} is not a rank I can hand out. Guest and the owner rank are off limits.`);
         }
         const current = await group.getMembership(found.user.id);
-        if (!current) return refuse(ctx, 'notmember', `**${found.user.name}** is not in the group, so there is nothing to rank.`);
+        if (!current) return refuse(ctx, 'notmember', `${found.user.name} is not in the group, so there is nothing to rank.`);
         if (current.id === role.id) {
           ctx.json = { code: 'already', ...targetView(found), role: roleView(role), error: `${mod('discord/groupActions').describeUser(found)} is already ${roleView(role).label}.` };
           return 'already';
@@ -635,7 +635,7 @@ module.exports = ({ need, fail, arg, num }) => {
         const group = mod('roblox/group');
         const found = await groupTarget(player);
         const current = await group.getMembership(found.user.id);
-        if (!current) return refuse(ctx, 'notmember', `**${found.user.name}** is not in the group, so there is nothing to change.`);
+        if (!current) return refuse(ctx, 'notmember', `${found.user.name} is not in the group, so there is nothing to change.`);
         const next = group.adjacentRole(await group.listRoles(), current.rank, direction);
         if (!next) {
           const { describeUser, describeRole } = mod('discord/groupActions');
@@ -652,7 +652,7 @@ module.exports = ({ need, fail, arg, num }) => {
         const group = mod('roblox/group');
         const found = await groupTarget(player);
         const current = await group.getMembership(found.user.id);
-        if (!current) return refuse(ctx, 'notmember', `**${found.user.name}** is not in the group.`);
+        if (!current) return refuse(ctx, 'notmember', `${found.user.name} is not in the group.`);
         await group.exile(found.user.id);
         await logAction(ctx, found, 'Exiled', `Was ${current.name}`);
         ctx.json = { code: 'ok', ...targetView(found), was: roleView(current) };
@@ -745,12 +745,12 @@ module.exports = ({ need, fail, arg, num }) => {
   // One reputation provider's answer in a line. A provider with no key is reported as
   // not having run, never folded into the clean result.
   function describeProvider(provider) {
-    if (provider.configured === false) return `⚪ **${provider.provider}**: not configured, so it did not run`;
-    if (provider.skipped) return `⚪ **${provider.provider}**: skipped${provider.note ? ` (${provider.note})` : ''}`;
-    if (provider.ok === false) return `⚠️ **${provider.provider}**: lookup failed (${provider.error ?? 'unknown'})`;
-    const head = provider.flagged ? `🔴 **${provider.provider}**: flagged`
-      : provider.appealed ? `🟢 **${provider.provider}**: previously flagged, since appealed`
-        : `🟢 **${provider.provider}**: clean`;
+    if (provider.configured === false) return `⚪ ${provider.provider}: not configured, so it did not run`;
+    if (provider.skipped) return `⚪ ${provider.provider}: skipped${provider.note ? ` (${provider.note})` : ''}`;
+    if (provider.ok === false) return `⚠️ ${provider.provider}: lookup failed (${provider.error ?? 'unknown'})`;
+    const head = provider.flagged ? `🔴 ${provider.provider}: flagged`
+      : provider.appealed ? `🟢 ${provider.provider}: previously flagged, since appealed`
+        : `🟢 ${provider.provider}: clean`;
     const lines = (provider.lines ?? []).map((line) => `  ${line}`);
     return [head, ...lines].join('\n') + (provider.partial ? '\n  *Part of this lookup failed.*' : '');
   }
@@ -912,11 +912,11 @@ module.exports = ({ need, fail, arg, num }) => {
     try {
       const found = await targetFromUsername(store, username);
       const request = await group.getJoinRequest(found.user.id);
-      if (!request) return `**${found.user.name}** has no join request waiting, so the group was left alone.`;
+      if (!request) return `${found.user.name} has no join request waiting, so the group was left alone.`;
       if (accepting) await group.acceptJoinRequest(found.user.id);
       else await group.declineJoinRequest(found.user.id);
       await logGroupAction(rt().client, { action: accepting ? 'Accepted into the group' : 'Declined', actorId: ctx.author.id, target: found, detail: 'From an application card' });
-      return accepting ? `**${found.user.name}** was accepted into the group.` : `**${found.user.name}**'s join request was declined.`;
+      return accepting ? `${found.user.name} was accepted into the group.` : `${found.user.name}'s join request was declined.`;
     } catch (error) {
       const why = error instanceof group.GroupError ? error.message : group.robloxErrorMessage(error);
       mod('util/logger').createLogger('discord:applications').warn(`Group action from an application card failed: ${why}`);
@@ -944,7 +944,7 @@ module.exports = ({ need, fail, arg, num }) => {
     const { config } = mod('config/index');
     return refuse(ctx, 'denied', config.discord.adminRoleId
       ? `Only <@&${config.discord.adminRoleId}> can use the admin panel.`
-      : 'This needs the **Administrator** permission, or an `ADMIN_ROLE_ID` role.');
+      : 'This needs the Administrator permission, or an `ADMIN_ROLE_ID` role.');
   };
 
   async function endShiftFor(ctx, discordId) {
@@ -954,7 +954,7 @@ module.exports = ({ need, fail, arg, num }) => {
     const shift = await manager.endIfOpen(discordId, 'admin');
     if (!shift) return refuse(ctx, 'notonshift', `<@${discordId}> was no longer on shift.`);
     const banked = formatDuration(summarise([shift]).workedMs);
-    await logAdmin(ctx, `Ended <@${discordId}>'s shift, **${banked}** banked.`);
+    await logAdmin(ctx, `Ended <@${discordId}>'s shift, ${banked} banked.`);
     ctx.json = { code: 'ok', discordId, typeLabel: mod('shifts/types').shiftTypeLabel(shift.type), banked };
     return 'ok';
   }
@@ -964,11 +964,11 @@ module.exports = ({ need, fail, arg, num }) => {
     const event = await events.getEvent(eventId);
     if (!event) return refuse(ctx, 'missing', 'There is no event with that id.');
     // Finishing something that never started would bank nothing and look like a bug.
-    if (event.status === 'scheduled') return refuse(ctx, 'not_started', `**${event.name}** has not started yet. Cancel it with \`/event action:cancel\` instead.`);
+    if (event.status === 'scheduled') return refuse(ctx, 'not_started', `${event.name} has not started yet. Cancel it with \`/event action:cancel\` instead.`);
     const result = await events.finish(eventId);
-    if (!result) return refuse(ctx, 'over', `**${event.name}** is already over.`);
+    if (!result) return refuse(ctx, 'over', `${event.name} is already over.`);
     const banked = (await events.listSignups(eventId)).filter((signup) => signup.shiftId !== null).length;
-    await logAdmin(ctx, `Ended the event **${result.name}**, ${banked} logged.`);
+    await logAdmin(ctx, `Ended the event ${result.name}, ${banked} logged.`);
     ctx.json = { code: 'ok', name: result.name, banked };
     return 'ok';
   }
@@ -1041,11 +1041,11 @@ module.exports = ({ need, fail, arg, num }) => {
       // Taking away more than somebody has would leave a negative total.
       const banked = summarise(await manager.listShifts(target, { type: type.trim() })).workedMs;
       if (sign === -1 && banked + deltaMs < 0) {
-        return refuse(ctx, 'not_enough', `<@${target}> only has **${formatDuration(banked)}** of ${shiftTypeLabel(type.trim())}, so ${formatDuration(-deltaMs)} cannot come off.`);
+        return refuse(ctx, 'not_enough', `<@${target}> only has ${formatDuration(banked)} of ${shiftTypeLabel(type.trim())}, so ${formatDuration(-deltaMs)} cannot come off.`);
       }
       await manager.adjust({ discordId: target, guildId: ctx.guild?.id ?? null, type: type.trim(), deltaMs, actorId: ctx.author.id });
       const after = formatDuration(banked + deltaMs);
-      await logAdmin(ctx, `**${formatSigned(deltaMs)}** of ${shiftTypeLabel(type.trim())} for <@${target}>, now ${after}.`);
+      await logAdmin(ctx, `${formatSigned(deltaMs)} of ${shiftTypeLabel(type.trim())} for <@${target}>, now ${after}.`);
       ctx.json = { code: 'ok', discordId: target, signed: formatSigned(deltaMs), typeLabel: shiftTypeLabel(type.trim()), after };
       return 'ok';
     } },
@@ -1220,7 +1220,7 @@ module.exports = ({ need, fail, arg, num }) => {
         squadName: squad?.label ?? '',
         hosted: hosted.hosted,
         hostedLive: hosted.live,
-        hostedText: hosted.hosted === 0 && hosted.live === 0 ? 'None' : `**${hosted.hosted}**${hosted.live > 0 ? ` (${hosted.live} on now)` : ''}`,
+        hostedText: hosted.hosted === 0 && hosted.live === 0 ? 'None' : `${hosted.hosted}${hosted.live > 0 ? ` (${hosted.live} on now)` : ''}`,
         byType,
         byTypeCount: byType.length,
         open: shiftView(open, now),
@@ -1283,6 +1283,50 @@ module.exports = ({ need, fail, arg, num }) => {
       };
       return 'ok';
     } },
+
+    // $linkStart[Roblox username?] → links without Roblox's sign in page.
+    // confirm: Bloxlink knows them, show the account and ask them to confirm it
+    // code: they typed a username Bloxlink does not vouch for, so they put $json[code] in their About
+    // ask: nothing to go on, ask for their username. not_found: no such Roblox user.
+    // The JSON has robloxId, username, displayName, profile and avatar.
+    linkStart: { async fn(ctx, a) {
+      rt();
+      const result = await mod('link').start(ctx.author.id, ctx.guild?.id ?? null, arg(a, 0).trim());
+      ctx.json = result;
+      if (result.status === 'not_found') ctx.json.error = `There is no Roblox account called ${result.username}. Check the spelling.`;
+      if (result.status === 'ask') ctx.json.error = 'Bloxlink does not know your Roblox account. Run /connect again with your Roblox username.';
+      return result.status;
+    } },
+
+    // $linkConfirm → finishes it. ok, or expired (start again), missing (the code is not
+    // in their About yet), failed (Roblox did not answer)
+    linkConfirm: { async fn(ctx) {
+      const { store, client, manager } = rt();
+      const link = mod('link');
+      const entry = link.current(ctx.author.id);
+      if (!entry) return refuse(ctx, 'expired', 'That ran out. Run /connect again.');
+      if (entry.via === 'code') {
+        let found;
+        try { found = await link.codeIsInProfile(entry); } catch { return refuse(ctx, 'failed', 'Roblox did not answer. Try again in a moment.'); }
+        if (!found) return refuse(ctx, 'missing', `The code ${entry.code} is not in the About of ${entry.name} yet. Save it on Roblox, wait a few seconds, then press the button again.`, link.view(entry));
+      }
+      const now = Date.now();
+      await store.upsertLink({
+        discordId: ctx.author.id, robloxId: entry.robloxId, robloxUsername: entry.name, robloxDisplayName: entry.displayName,
+        accessToken: null, refreshToken: null, tokenExpiresAt: null, linkedAt: now, updatedAt: now,
+      });
+      // Start presence fresh, so the next poll treats them as joining.
+      await store.deleteWatchState(ctx.author.id);
+      link.cancel(ctx.author.id);
+      mod('util/logger').createLogger('link').info(`Linked Discord ${ctx.author.id} to Roblox ${entry.robloxId} (${entry.name}) through ${entry.via}`);
+      void mod('ui').dm(ctx.author.id, 'connect linked', { discordId: ctx.author.id, displayName: entry.displayName, username: entry.name });
+      void mod('discord/roles').syncDutyRoles(client, manager, ctx.guild?.id ?? null, ctx.author.id);
+      ctx.json = { code: 'ok', ...link.view(entry) };
+      return 'ok';
+    } },
+
+    // $linkCancel → forgets a link that was not finished
+    linkCancel: { fn(ctx) { mod('link').cancel(ctx.author.id); return ''; } },
 
     // $disconnect → ok (displayName, username, closed = yes when a running shift was ended) or none
     disconnect: { async fn(ctx) {

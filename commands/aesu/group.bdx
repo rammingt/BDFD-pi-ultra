@@ -8,7 +8,7 @@ $onlyIf[$groupOn==yes;Group management is off. Set `ROBLOX_GROUP_ID` and `ROBLOX
 @name group
 @type slash
 @description Manage the Roblox group: join requests, ranks and members.
-@option action:string:What to do.:required:pending=Pending\: Everybody waiting to join the group.|accept=Accept\: Accept somebody into the group.|decline=Decline\: Turn down somebody's request to join.|rank=Rank\: Set somebody to an exact rank.|promote=Promote\: Move somebody one rank up.|demote=Demote\: Move somebody one rank down.|exile=Exile\: Remove somebody from the group.|info=Info\: Somebody's rank and whether they are waiting to join.|roles=Roles\: The rank ladder and how many hold each one.
+@option action:string:What to do.:required:pending=Pending|accept=Accept|decline=Decline|rank=Rank|promote=Promote|demote=Demote|exile=Exile|info=Info|roles=Roles
 @option player:string:Roblox username, Roblox id, or a Discord mention.
 @option role:string:Rank name or number, from /group action:roles.
 $c[Runs the snippet for the action picked, like group_pending. Each one is below.]
@@ -22,7 +22,7 @@ $var[r;$groupPending]
 $onlyIf[$var[r]==ok;$json[error]]
 $onlyIf[$json[count]>0;Nobody is waiting to join the group.]
 $addContainer[pending]
-$addTextDisplay[**$json[count] pending request(s)**
+$addTextDisplay[$json[count] pending request(s)
 $jsonList[requests;{profile} {when}]]
 $addTextDisplay[-# Accept one with `/group action:accept`.]
 $closeContainer
@@ -30,7 +30,7 @@ $closeContainer
 @name group_accept
 @type snippet
 $c[/group action:accept. Accept somebody into the group.]
-$onlyIf[$message[player]!=;Fill in the **player** option for /group action:accept.]
+$onlyIf[$message[player]!=;Fill in the player option for /group action:accept.]
 $include[groupgate]
 $var[r;$groupDecide[accept;$message[player]]]
 $onlyIf[$var[r]==ok;$json[error]]
@@ -39,7 +39,7 @@ $json[user] is in the group.
 @name group_decline
 @type snippet
 $c[/group action:decline. Turn down somebody's request to join.]
-$onlyIf[$message[player]!=;Fill in the **player** option for /group action:decline.]
+$onlyIf[$message[player]!=;Fill in the player option for /group action:decline.]
 $include[groupgate]
 $var[r;$groupDecide[decline;$message[player]]]
 $onlyIf[$var[r]==ok;$json[error]]
@@ -48,8 +48,8 @@ $json[user]'s request was declined.
 @name group_rank
 @type snippet
 $c[/group action:rank. Set somebody to an exact rank.]
-$onlyIf[$message[player]!=;Fill in the **player** option for /group action:rank.]
-$onlyIf[$message[role]!=;Fill in the **role** option for /group action:rank.]
+$onlyIf[$message[player]!=;Fill in the player option for /group action:rank.]
+$onlyIf[$message[role]!=;Fill in the role option for /group action:rank.]
 $include[groupgate]
 $var[r;$groupRank[$message[player];$message[role]]]
 $onlyIf[$var[r]==ok;$json[error]]
@@ -58,7 +58,7 @@ $json[user] is now $json[role;label].
 @name group_promote
 @type snippet
 $c[/group action:promote. Move somebody one rank up.]
-$onlyIf[$message[player]!=;Fill in the **player** option for /group action:promote.]
+$onlyIf[$message[player]!=;Fill in the player option for /group action:promote.]
 $include[groupgate]
 $var[r;$groupStep[up;$message[player]]]
 $onlyIf[$var[r]==ok;$json[error]]
@@ -67,7 +67,7 @@ $json[user] is now $json[role;label].
 @name group_demote
 @type snippet
 $c[/group action:demote. Move somebody one rank down.]
-$onlyIf[$message[player]!=;Fill in the **player** option for /group action:demote.]
+$onlyIf[$message[player]!=;Fill in the player option for /group action:demote.]
 $include[groupgate]
 $var[r;$groupStep[down;$message[player]]]
 $onlyIf[$var[r]==ok;$json[error]]
@@ -76,7 +76,7 @@ $json[user] is now $json[role;label].
 @name group_exile
 @type snippet
 $c[/group action:exile. Remove somebody from the group.]
-$onlyIf[$message[player]!=;Fill in the **player** option for /group action:exile.]
+$onlyIf[$message[player]!=;Fill in the player option for /group action:exile.]
 $include[groupgate]
 $var[r;$groupExile[$message[player]]]
 $onlyIf[$var[r]==ok;$json[error]]
@@ -85,7 +85,7 @@ $json[user] was removed from the group. They were $json[was;label].
 @name group_info
 @type snippet
 $c[/group action:info. Somebody's rank and whether they are waiting to join.]
-$onlyIf[$message[player]!=;Fill in the **player** option for /group action:info.]
+$onlyIf[$message[player]!=;Fill in the player option for /group action:info.]
 $include[groupgate]
 $var[r;$groupInfo[$message[player]]]
 $onlyIf[$var[r]==ok;$json[error]]
@@ -113,7 +113,7 @@ $closeContainer
 @type hook
 $c[Written to GROUP_LOG_CHANNEL_ID for every group action, when that is set.]
 $addContainer[log]
-$addTextDisplay[**$json[action]** · $json[user]
+$addTextDisplay[$json[action] · $json[user]
 $if[$json[detail]!=;$json[detail]
 ]By <@$json[actorId]> · <t:$getTimestamp:f>]
 $closeContainer

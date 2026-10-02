@@ -1,7 +1,7 @@
 @name squad
 @type slash
 @description See and set which squad somebody is in.
-@option action:string:What to do.:required:info=Info\: Somebody's squad and how many events they have hosted. Defaults to you.|set=Set\: Move somebody into a squad. Their old squad role is taken off.|clear=Clear\: Take somebody out of their squad.|roster=Roster\: How many people are in each squad.
+@option action:string:What to do.:required:info=Info|set=Set|clear=Clear|roster=Roster
 @option user:user:Who to look up.
 @option squad:string:Which squad they join.::from squads
 $c[Runs the snippet for the action picked, like squad_info. Each one is below.]
@@ -13,33 +13,33 @@ $c[/squad action:info. Somebody's squad and how many events they have hosted. De
 $ephemeral
 $var[r;$squadInfo[$message[user]]]
 $if[$json[inSquad]==yes]
-<@$json[discordId]> is in **$json[squad;label]**, holding $json[squad;roles].
+<@$json[discordId]> is in $json[squad;label], holding $json[squad;roles].
 $else
 <@$json[discordId]> is not in a squad.
 $endif
-Events hosted: **$json[hosted]**$if[$json[hostedLive]>0; ($json[hostedLive] on now)]
+Events hosted: $json[hosted]$if[$json[hostedLive]>0; ($json[hostedLive] on now)]
 ---
 @name squad_set
 @type snippet
 $c[/squad action:set. Move somebody into a squad. Their old squad role is taken off.]
-$onlyIf[$message[user]!=;Fill in the **user** option for /squad action:set.]
-$onlyIf[$message[squad]!=;Fill in the **squad** option for /squad action:set.]
+$onlyIf[$message[user]!=;Fill in the user option for /squad action:set.]
+$onlyIf[$message[squad]!=;Fill in the squad option for /squad action:set.]
 $ephemeral
 $onlyIf[$aesuAllowed[squad]==yes;$if[$aesuRole[squad]==;You do not have permission to do that.;Only $aesuRole[squad] can change squads.]]
 $var[r;$squadSet[$message[user];$message[squad]]]
 $onlyIf[$var[r]==ok;$json[error]]
-<@$json[discordId]> is in **$json[squad;label]**, holding $json[squad;roles].
+<@$json[discordId]> is in $json[squad;label], holding $json[squad;roles].
 ---
 @name squad_clear
 @type snippet
 $c[/squad action:clear. Take somebody out of their squad.]
-$onlyIf[$message[user]!=;Fill in the **user** option for /squad action:clear.]
+$onlyIf[$message[user]!=;Fill in the user option for /squad action:clear.]
 $ephemeral
 $onlyIf[$aesuAllowed[squad]==yes;$if[$aesuRole[squad]==;You do not have permission to do that.;Only $aesuRole[squad] can change squads.]]
 $var[r;$squadClear[$message[user]]]
 $onlyIf[$var[r]==ok;$json[error]]
 $if[$json[was]!=]
-<@$json[discordId]> was taken out of **$json[was]**.
+<@$json[discordId]> was taken out of $json[was].
 $else
 <@$json[discordId]> was not in a squad. Any leftover squad roles have been cleared.
 $endif
@@ -51,7 +51,7 @@ $ephemeral
 $var[r;$squadRoster]
 $onlyIf[$var[r]==ok;$json[error]]
 $addContainer[roster]
-$addTextDisplay[$jsonList[squads;{role} · **{count}** member(s)]]
+$addTextDisplay[$jsonList[squads;{role} · {count} member(s)]]
 $addSeparator
-$addTextDisplay[Not in a squad: **$json[unassigned]**]
+$addTextDisplay[Not in a squad: $json[unassigned]]
 $closeContainer

@@ -70,7 +70,7 @@ module.exports = (reply, { readEnv, writeEnv, author }) => ({
     const banked = mod('util/time').formatDuration(summarise([shift]).workedMs);
     const { config } = mod('config/index');
     if (config.discord.adminLogChannelId) {
-      await mod('ui').post(config.discord.adminLogChannelId, 'admin log', { what: `Ended <@${id}>'s shift from the web panel, **${banked}** banked.`, actorId: runtime.client?.user?.id ?? '' }).catch(() => {});
+      await mod('ui').post(config.discord.adminLogChannelId, 'admin log', { what: `Ended <@${id}>'s shift from the web panel, ${banked} banked.`, actorId: runtime.client?.user?.id ?? '' }).catch(() => {});
     }
     return { ended: true, banked, by: author };
   },

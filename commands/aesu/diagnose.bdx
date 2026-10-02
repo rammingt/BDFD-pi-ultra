@@ -5,7 +5,7 @@ $ephemeral
 $aesuDiagnose
 $addContainer[diagnose]
 $addTextDisplay[### Diagnose]
-$addTextDisplay[$jsonList[sections;**{title}** {mark}
+$addTextDisplay[$jsonList[sections;{title} {mark}
 {text};;\n\n]]
 $if[$json[verdict]!=]
 $addSeparator

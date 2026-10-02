@@ -160,12 +160,12 @@ class EventManager {
       const signups = await this.store.listSignups(eventId);
       const existing = signups.find((signup) => signup.discordId === discordId) ?? null;
       if (existing?.roleKey === roleKey) {
-        throw new EventInputError(`You are already down as **${role?.label ?? DECLINED_LABEL}**.`);
+        throw new EventInputError(`You are already down as ${role?.label ?? DECLINED_LABEL}.`);
       }
 
       if (role?.limit != null) {
         const taken = signups.filter((signup) => signup.roleKey === roleKey && signup.discordId !== discordId).length;
-        if (taken >= role.limit) throw new EventInputError(`**${role.label}** is full (${role.limit} of ${role.limit}).`);
+        if (taken >= role.limit) throw new EventInputError(`${role.label} is full (${role.limit} of ${role.limit}).`);
       }
 
       const now = Date.now();
