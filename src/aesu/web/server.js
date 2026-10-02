@@ -45,7 +45,7 @@ async function handleOAuthCallback(url, response, deps) {
 
   const stored = await deps.store.consumeOAuthState(state);
   if (!stored) {
-    send(response, 400, errorPage('That link was already used or is not one I issued.'));
+    send(response, 400, errorPage('that link was already used or isnt from this bot'));
     return;
   }
   if (stored.expiresAt <= Date.now()) {

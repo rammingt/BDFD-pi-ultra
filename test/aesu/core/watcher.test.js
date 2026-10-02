@@ -231,7 +231,7 @@ describe('PresenceWatcher', () => {
     await watcher.tick();
 
     assert.equal(sent[0]?.edits.length, 1, 'the prompt is collapsed');
-    assert.match(textOf(sent[0]?.edits[0]), /Not logging this session/);
+    assert.match(textOf(sent[0]?.edits[0]), /not logged/);
   });
 
   it('prompts again when the member rejoins later', async () => {

@@ -2,15 +2,15 @@
 @type snippet
 $c[Checked first by every /group command: the staff role, and a group to act on.]
 $ephemeral
-$onlyIf[$aesuAllowed[group]==yes;$if[$aesuRole[group]==;You do not have permission to do that.;Only $aesuRole[group] can manage the group.]]
-$onlyIf[$groupOn==yes;Group management is off. Set `ROBLOX_GROUP_ID` and `ROBLOX_GROUP_COOKIE` (an account with a ranking permission in that group), then restart.]
+$onlyIf[$aesuAllowed[group]==yes;$if[$aesuRole[group]==;u cant do that;only $aesuRole[group] can manage the group]]
+$onlyIf[$groupOn==yes;group stuff is off, set `ROBLOX_GROUP_ID` n `ROBLOX_GROUP_COOKIE` (acc that can rank) then restart]
 ---
 @name group
 @type slash
-@description Manage the Roblox group: join requests, ranks and members.
-@option action:string:What to do.:required:pending=Pending|accept=Accept|decline=Decline|rank=Rank|promote=Promote|demote=Demote|exile=Exile|info=Info|roles=Roles
-@option player:string:Roblox username, Roblox id, or a Discord mention.
-@option role:string:Rank name or number, from /group action:roles.
+@description roblox group
+@option action:string:what u wanna do:required:pending=Pending|accept=Accept|decline=Decline|rank=Rank|promote=Promote|demote=Demote|exile=Exile|info=Info|roles=Roles
+@option player:string:roblox username or id or a discord ping
+@option role:string:rank name or number
 $c[Runs the snippet for the action picked, like group_pending. Each one is below.]
 $include[group_$message[action]]
 ---
@@ -20,82 +20,82 @@ $c[/group action:pending. Everybody waiting to join the group.]
 $include[groupgate]
 $var[r;$groupPending]
 $onlyIf[$var[r]==ok;$json[error]]
-$onlyIf[$json[count]>0;Nobody is waiting to join the group.]
+$onlyIf[$json[count]>0;no join requests rn]
 $addContainer[pending]
-$addTextDisplay[$json[count] pending request(s)
+$addTextDisplay[$json[count] waiting
 $jsonList[requests;{profile} {when}]]
-$addTextDisplay[-# Accept one with `/group action:accept`.]
+$addTextDisplay[-# `/group action:accept` to let someone in]
 $closeContainer
 ---
 @name group_accept
 @type snippet
 $c[/group action:accept. Accept somebody into the group.]
-$onlyIf[$message[player]!=;Fill in the player option for /group action:accept.]
+$onlyIf[$message[player]!=;fill in player for /group action:accept]
 $include[groupgate]
 $var[r;$groupDecide[accept;$message[player]]]
 $onlyIf[$var[r]==ok;$json[error]]
-$json[user] is in the group.
+$json[user] accepted
 ---
 @name group_decline
 @type snippet
 $c[/group action:decline. Turn down somebody's request to join.]
-$onlyIf[$message[player]!=;Fill in the player option for /group action:decline.]
+$onlyIf[$message[player]!=;fill in player for /group action:decline]
 $include[groupgate]
 $var[r;$groupDecide[decline;$message[player]]]
 $onlyIf[$var[r]==ok;$json[error]]
-$json[user]'s request was declined.
+$json[user] declined
 ---
 @name group_rank
 @type snippet
 $c[/group action:rank. Set somebody to an exact rank.]
-$onlyIf[$message[player]!=;Fill in the player option for /group action:rank.]
-$onlyIf[$message[role]!=;Fill in the role option for /group action:rank.]
+$onlyIf[$message[player]!=;fill in player for /group action:rank]
+$onlyIf[$message[role]!=;fill in role for /group action:rank]
 $include[groupgate]
 $var[r;$groupRank[$message[player];$message[role]]]
 $onlyIf[$var[r]==ok;$json[error]]
-$json[user] is now $json[role;label].
+$json[user] is $json[role;label] now
 ---
 @name group_promote
 @type snippet
 $c[/group action:promote. Move somebody one rank up.]
-$onlyIf[$message[player]!=;Fill in the player option for /group action:promote.]
+$onlyIf[$message[player]!=;fill in player for /group action:promote]
 $include[groupgate]
 $var[r;$groupStep[up;$message[player]]]
 $onlyIf[$var[r]==ok;$json[error]]
-$json[user] is now $json[role;label].
+$json[user] is $json[role;label] now
 ---
 @name group_demote
 @type snippet
 $c[/group action:demote. Move somebody one rank down.]
-$onlyIf[$message[player]!=;Fill in the player option for /group action:demote.]
+$onlyIf[$message[player]!=;fill in player for /group action:demote]
 $include[groupgate]
 $var[r;$groupStep[down;$message[player]]]
 $onlyIf[$var[r]==ok;$json[error]]
-$json[user] is now $json[role;label].
+$json[user] is $json[role;label] now
 ---
 @name group_exile
 @type snippet
 $c[/group action:exile. Remove somebody from the group.]
-$onlyIf[$message[player]!=;Fill in the player option for /group action:exile.]
+$onlyIf[$message[player]!=;fill in player for /group action:exile]
 $include[groupgate]
 $var[r;$groupExile[$message[player]]]
 $onlyIf[$var[r]==ok;$json[error]]
-$json[user] was removed from the group. They were $json[was;label].
+$json[user] exiled, was $json[was;label]
 ---
 @name group_info
 @type snippet
 $c[/group action:info. Somebody's rank and whether they are waiting to join.]
-$onlyIf[$message[player]!=;Fill in the player option for /group action:info.]
+$onlyIf[$message[player]!=;fill in player for /group action:info]
 $include[groupgate]
 $var[r;$groupInfo[$message[player]]]
 $onlyIf[$var[r]==ok;$json[error]]
 $json[user] · `$json[robloxId]`
-$if[$json[inGroup]==yes;In the group as $json[role;label].;Not in the group.]
+$if[$json[inGroup]==yes;in group as $json[role;label];not in the group]
 $if[$json[waiting]==yes]
-They have a join request waiting.
+got a join request waiting
 $endif
 $if[$json[linked]==no]
-No Discord account is linked to them.
+no discord linked
 $endif
 ---
 @name group_roles
@@ -104,7 +104,7 @@ $c[/group action:roles. The rank ladder and how many hold each one.]
 $include[groupgate]
 $var[r;$groupRoles]
 $onlyIf[$var[r]==ok;$json[error]]
-$onlyIf[$json[count]>0;The group has no ranks, which usually means the id is wrong.]
+$onlyIf[$json[count]>0;group got no ranks, prob wrong id]
 $addContainer[roles]
 $addTextDisplay[$jsonList[roles;`{number}` {name}{members}{note}]]
 $closeContainer
@@ -115,5 +115,5 @@ $c[Written to GROUP_LOG_CHANNEL_ID for every group action, when that is set.]
 $addContainer[log]
 $addTextDisplay[$json[action] · $json[user]
 $if[$json[detail]!=;$json[detail]
-]By <@$json[actorId]> · <t:$getTimestamp:f>]
+]by <@$json[actorId]> · <t:$getTimestamp:f>]
 $closeContainer

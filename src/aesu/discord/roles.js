@@ -40,12 +40,11 @@ function explainRoleError(error, guild, what = 'duty roles') {
   if (error instanceof DiscordAPIError) {
     if (error.code === 50013) {
       return (
-        `The bot needs Manage Roles in ${guild.name}, and its own role has to sit above the ${what} ` +
-        'in Server Settings > Roles.'
+        `bot needs Manage Roles in ${guild.name} and its role gotta be above the ${what}`
       );
     }
-    if (error.code === 10011) return `One of the ${what} ids does not exist in ${guild.name}.`;
-    if (error.code === 10007) return `They are not in ${guild.name}.`;
+    if (error.code === 10011) return `one of the ${what} ids doesnt exist in ${guild.name}`;
+    if (error.code === 10007) return `theyre not in ${guild.name}`;
   }
   return `${guild.name}: ${describeError(error)}`;
 }

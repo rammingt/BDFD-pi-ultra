@@ -70,7 +70,7 @@ class ShiftManager {
     return this.locks.run(input.discordId, async () => {
       const existing = await this.store.getOpenShift(input.discordId);
       if (existing) {
-        throw new ShiftError('You already have a shift running. End it before starting another one.');
+        throw new ShiftError('u already got a shift running, end it first');
       }
 
       const now = Date.now();
@@ -109,7 +109,7 @@ class ShiftManager {
   async startBreak(discordId) {
     return this.locks.run(discordId, async () => {
       const shift = await this.requireOpenShift(discordId);
-      if (shift.status === 'on_break') throw new ShiftError('You are already on a break.');
+      if (shift.status === 'on_break') throw new ShiftError('ur already on break');
 
       const now = Date.now();
       const updated = {
@@ -129,7 +129,7 @@ class ShiftManager {
   async endBreak(discordId) {
     return this.locks.run(discordId, async () => {
       const shift = await this.requireOpenShift(discordId);
-      if (shift.status !== 'on_break') throw new ShiftError('You are not on a break right now.');
+      if (shift.status !== 'on_break') throw new ShiftError('ur not on break');
 
       const now = Date.now();
       const taken = shift.breakStartedAt === null ? 0 : Math.max(0, now - shift.breakStartedAt);
@@ -313,7 +313,7 @@ class ShiftManager {
 
   async requireOpenShift(discordId) {
     const shift = await this.store.getOpenShift(discordId);
-    if (!shift) throw new ShiftError('You do not have a shift running right now.');
+    if (!shift) throw new ShiftError('u got no shift running');
     return shift;
   }
 }

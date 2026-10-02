@@ -1,32 +1,32 @@
 @name event
 @type slash
-@description Schedule events and log everyone who turns up.
-@option action:string:What to do.:required:create=Create|list=List|info=Info|end=End|cancel=Cancel
-@option name:string:Event name.
-@option start:string:When it starts\: now, 90m, 2h30m, 21\:00, or 2026-03-01 21\:00.
-@option type:string:What the attendance is logged as.::from shiftTypes
-@option details:string:What the event is about.
-@option image:string:Link to an image to show on the post.
-@option roles:string:Sign up options, like Guard\:8, Medic\:2, Spectator. Defaults to Attending, Tentative.
-@option timezone:string:IANA timezone for the start time, like Asia/Seoul.
-@option channel:channel:Where to post it. Defaults to EVENT_CHANNEL_ID.
-@option id:string:Event id.
+@description events n attendance
+@option action:string:what u wanna do:required:create=Create|list=List|info=Info|end=End|cancel=Cancel
+@option name:string:event name
+@option start:string:when, like now or 90m or 21\:00 or 2026-03-01 21\:00
+@option type:string:log time as::from shiftTypes
+@option details:string:whats it about
+@option image:string:image link for the post
+@option roles:string:signup options like Guard\:8, Medic\:2
+@option timezone:string:timezone like Asia/Seoul
+@option channel:channel:where to post it
+@option id:string:event id
 $c[Runs the snippet for the action picked, like event_create. Each one is below.]
 $include[event_$message[action]]
 ---
 @name event_create
 @type snippet
 $c[/event action:create. Post a new event people can sign up to.]
-$onlyIf[$message[name]!=;Fill in the name option for /event action:create.]
-$onlyIf[$message[start]!=;Fill in the start option for /event action:create.]
-$onlyIf[$message[type]!=;Fill in the type option for /event action:create.]
+$onlyIf[$message[name]!=;fill in name for /event action:create]
+$onlyIf[$message[start]!=;fill in start for /event action:create]
+$onlyIf[$message[type]!=;fill in type for /event action:create]
 $ephemeral
 $var[r;$eventCreate[$message[name];$message[start];$message[type];$message[details];$message[image];$message[roles];$message[timezone];$message[channel]]]
 $onlyIf[$var[r]==ok;$json[error]]
-$json[name] is up in <#$json[channelId]>, starting $json[startsRelative].
-Event id `$json[id]`. It runs until you press End now on the post, then everybody's time is logged as $json[shiftTypeLabel].
+$json[name] posted in <#$json[channelId]>, starts $json[startsRelative]
+id `$json[id]`, runs till someone hits End now, then time gets logged as $json[shiftTypeLabel]
 $if[$json[postUrl]!=]
-$addButton[yes;$json[postUrl];Jump to the post;link]
+$addButton[yes;$json[postUrl];Go to post;link]
 $endif
 ---
 @name event_list
@@ -34,16 +34,16 @@ $endif
 $c[/event action:list. Show events that have not finished yet.]
 $ephemeral
 $eventList
-$onlyIf[$json[count]>0;Nothing scheduled. Create one with `/event action:create`.]
+$onlyIf[$json[count]>0;no events rn, make one with `/event action:create`]
 $addContainer[events]
-$addTextDisplay[### Open events
+$addTextDisplay[### events
 $jsonList[events;`{id}` {name} {startsRelative}{nowNote}]]
 $closeContainer
 ---
 @name event_info
 @type snippet
 $c[/event action:info. Show one event and who signed up.]
-$onlyIf[$message[id]!=;Fill in the id option for /event action:info.]
+$onlyIf[$message[id]!=;fill in id for /event action:info]
 $ephemeral
 $var[r;$eventInfo[$message[id]]]
 $onlyIf[$var[r]==ok;$json[error]]
@@ -52,20 +52,20 @@ $include[eventcard]
 @name event_end
 @type snippet
 $c[/event action:end. End a running event now and log everybody who attended.]
-$onlyIf[$message[id]!=;Fill in the id option for /event action:end.]
+$onlyIf[$message[id]!=;fill in id for /event action:end]
 $ephemeral
 $var[r;$eventEnd[$message[id]]]
 $onlyIf[$var[r]==ok;$json[error]]
-$json[name] is closed. $json[bankedCount] attendee(s) had their time logged.
+$json[name] ended, time logged for $json[bankedCount]
 ---
 @name event_cancel
 @type snippet
 $c[/event action:cancel. Call an event off without logging any attendance.]
-$onlyIf[$message[id]!=;Fill in the id option for /event action:cancel.]
+$onlyIf[$message[id]!=;fill in id for /event action:cancel]
 $ephemeral
 $var[r;$eventCancel[$message[id]]]
 $onlyIf[$var[r]==ok;$json[error]]
-$json[name] was cancelled. No attendance was logged.
+$json[name] cancelled, nothing logged
 ---
 @name eventcard
 @type snippet
@@ -75,11 +75,11 @@ $addTextDisplay[## $json[name]]
 $if[$json[details]!=]
 $addTextDisplay[$json[details]]
 $endif
-$addTextDisplay[Hosted by $json[host]]
+$addTextDisplay[host: $json[host]]
 $addSeparator
-$addTextDisplay[Time: $json[starts] ($json[startsRelative])
-Ends: $if[$json[ends]==;When the host ends it;$json[ends], $json[length] long]
-Status: $json[statusLabel]]
+$addTextDisplay[time: $json[starts] ($json[startsRelative])
+ends: $if[$json[ends]==;whenever the host ends it;$json[ends], $json[length] long]
+status: $json[statusLabel]]
 $addSeparator
 $addTextDisplay[$jsonList[roles;{label} ({count})
 {list};;\n\n]]
@@ -89,13 +89,13 @@ $json[declinedList]]
 $endif
 $if[$json[ended]==yes]
 $addSeparator
-$addTextDisplay[Logged as $json[shiftTypeLabel]
-$if[$json[bankedCount]==0;Nobody was seen in a tracked game for long enough to log.;$json[bankedList]]]
+$addTextDisplay[logged as $json[shiftTypeLabel]
+$if[$json[bankedCount]==0;nobody was in game long enough;$json[bankedList]]]
 $endif
 $if[$json[imageUrl]!=]
 $addMediaGallery[$json[imageUrl]]
 $endif
-$addTextDisplay[-# Event $json[id]]
+$addTextDisplay[-# event $json[id]]
 $closeContainer
 ---
 @name event post
@@ -106,18 +106,18 @@ $if[$json[open]==yes]
 $addButtons[roles;aesu:event_join:$json[id]:{key};{label};primary;yes]
 $addButton[yes;aesu:event_join:$json[id]:$json[declinedKey];$json[declinedLabel];secondary]
 $addButton[no;aesu:event_end:$json[id];End now;secondary]
-$addButton[no;aesu:event_cancel:$json[id];Cancel event;danger]
+$addButton[no;aesu:event_cancel:$json[id];Cancel;danger]
 $endif
 ---
 @name event start
 @type hook
 $c[Sent when an event starts. Pings everybody signed up, except those who cannot make it.]
-$json[name] is starting now. $json[mentions]
+$json[name] starting now $json[mentions]
 ---
 @name event host away
 @type hook
 $c[Sent once when the host leaves the game while their event is still counting attendance.]
-<@$json[hostId]> you have left the game but $json[name] is still running, so attendance is still counting. Press End now on $if[$json[url]==;the event post;the event post ($json[url])] when it is over, or run `/event action:end` with the id `$json[id]`.
+<@$json[hostId]> u left the game but $json[name] is still going, hit End now on $if[$json[url]==;the post;the post ($json[url])] when its over or `/event action:end` with id `$json[id]`
 ---
 @name aesu:event_join
 @type button
@@ -126,9 +126,9 @@ $ephemeral
 $var[r;$eventSignup[$message[1];$message[2]]]
 $onlyIf[$var[r]==ok;$json[error]]
 $if[$json[declined]==yes]
-Put down as $json[label].
+ok put u down as $json[label]
 $else
-Signed up as $json[label]. Your time in game during the event is logged automatically when it ends.
+signed up as $json[label], ur in game time gets logged when it ends
 $endif
 ---
 @name aesu:event_end
@@ -136,14 +136,14 @@ $endif
 $ephemeral
 $var[r;$eventEnd[$message[1]]]
 $if[$var[r]==not_started]
-$stop[That event has not started yet. Cancel it instead if it is not going ahead.]
+$stop[it hasnt started yet, cancel it if its not happening]
 $endif
 $onlyIf[$var[r]==ok;$json[error]]
-$json[name] is closed. $json[bankedCount] attendee(s) had their time logged.
+$json[name] ended, time logged for $json[bankedCount]
 ---
 @name aesu:event_cancel
 @type button
 $ephemeral
 $var[r;$eventCancel[$message[1]]]
 $onlyIf[$var[r]==ok;$json[error]]
-$json[name] was cancelled.
+$json[name] cancelled

@@ -57,10 +57,10 @@ function robloxErrorMessage(error) {
     // Not JSON; fall through to the status.
   }
 
-  if (error.status === 401) return 'The group account cookie is invalid or expired.';
-  if (error.status === 403) return 'That account does not have permission to do this in the group.';
-  if (error.status === 429) return 'Roblox is rate limiting the group account. Try again in a minute.';
-  return `Roblox returned HTTP ${error.status}.`;
+  if (error.status === 401) return 'group acc cookie is dead or expired';
+  if (error.status === 403) return 'that acc cant do that in the group';
+  if (error.status === 429) return 'roblox is rate limiting, try again in a min';
+  return `roblox gave HTTP ${error.status}`;
 }
 
 module.exports = { robloxAuthed, robloxErrorMessage };

@@ -9,27 +9,27 @@ const { DECLINED_LABEL, DECLINED_ROLE_KEY, totalAttendance } = require('./events
 
 const yes = (v) => (v ? 'yes' : 'no');
 
-const STATUS_LABEL = { active: 'On shift', on_break: 'On break', ended: 'Ended' };
+const STATUS_LABEL = { active: 'on shift', on_break: 'on break', ended: 'done' };
 
 const END_REASON_LABEL = {
-  manual: 'Ended from the panel',
-  left_game: 'Left the game',
-  max_duration: 'Hit the maximum shift length',
-  admin: 'Ended by a staff member',
-  event_ended: 'Event finished',
+  manual: 'ended from the panel',
+  left_game: 'left the game',
+  max_duration: 'hit the max shift length',
+  admin: 'staff ended it',
+  event_ended: 'event ended',
 };
 
 const SOURCE_LABEL = { prompt: 'join prompt', panel: 'shift panel', event: 'event attendance', admin: 'admin adjustment' };
 
 function gameLine(shift) {
-  const name = shift.gameName ?? (shift.placeId ? `Place ${shift.placeId}` : null);
-  if (!name) return 'Not detected';
+  const name = shift.gameName ?? (shift.placeId ? `place ${shift.placeId}` : null);
+  if (!name) return 'idk';
   const url = robloxGameUrl(shift.placeId);
   return url ? `[${name}](${url})` : name;
 }
 
 function robloxLine(robloxId, robloxUsername) {
-  return robloxId ? `[${robloxUsername ?? robloxId}](${robloxProfileUrl(robloxId)})` : 'Not linked';
+  return robloxId ? `[${robloxUsername ?? robloxId}](${robloxProfileUrl(robloxId)})` : 'not linked';
 }
 
 /** formatDuration floors at 0m, which would show time taken away as nothing at all. */
@@ -64,7 +64,7 @@ function shiftView(shift, now = Date.now()) {
     elapsed: formatDuration(elapsedMs),
     breakTime: formatDuration(breakMs),
     breakCount: shift.breakCount,
-    breaks: shift.breakCount === 0 ? 'None' : `${shift.breakCount} (${formatDuration(breakMs)})`,
+    breaks: shift.breakCount === 0 ? 'none' : `${shift.breakCount} (${formatDuration(breakMs)})`,
     game: gameLine(shift),
     gameName: shift.gameName ?? '',
     gameUrl: robloxGameUrl(shift.placeId) ?? '',
@@ -96,7 +96,7 @@ function panelView(shift, selectedType = null, now = Date.now()) {
   };
 }
 
-const EVENT_STATUS_LABEL = { scheduled: 'Scheduled', running: 'Happening now', ended: 'Finished', cancelled: 'Cancelled' };
+const EVENT_STATUS_LABEL = { scheduled: 'soon', running: 'going rn', ended: 'over', cancelled: 'cancelled' };
 
 function eventUrl(event) {
   if (!event.guildId || !event.channelId || !event.messageId) return '';
@@ -104,13 +104,13 @@ function eventUrl(event) {
 }
 
 /** Long sign up lists get cut short, so a post never runs past what Discord allows. */
-function clampLines(lines, empty = 'Nobody yet') {
+function clampLines(lines, empty = 'nobody yet') {
   if (lines.length === 0) return empty;
   const kept = [];
   let length = 0;
   for (const line of lines) {
     if (length + line.length + 1 > 960) {
-      kept.push(`and ${lines.length - kept.length} more`);
+      kept.push(`+${lines.length - kept.length} more`);
       break;
     }
     kept.push(line);

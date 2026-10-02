@@ -6,7 +6,7 @@
 // $json[...], loop over lists with $jsonList, and save it for buttons with
 // $jsonStash, the same way they would with an $httpGet result.
 
-const AUTO_NOTE = 'Automatic name matches are guesses from a word list, not decisions. They are often wrong.';
+const AUTO_NOTE = 'sus names r just word list guesses, often wrong';
 const lastCheckByUser = new Map();
 
 // Loaded on first use, after .env has been read
@@ -21,17 +21,17 @@ module.exports = ({ need, fail, arg, num }) => {
   const autoView = (m) => ({ ...m, reasons: (m.reasons || []).join('; ') });
 
   function inventoryText(scan, matchCount, score, isPrivate) {
-    if (isPrivate) return 'Inventory is private';
-    if (!scan) return 'Not scanned';
-    if (scan.error) return `Incomplete: ${scan.error}`.slice(0, 1000);
-    if (matchCount === 0) return `None flagged, ${scan.count} scanned`;
+    if (isPrivate) return 'inventory private';
+    if (!scan) return 'not scanned';
+    if (scan.error) return `didnt finish: ${scan.error}`.slice(0, 1000);
+    if (matchCount === 0) return `clean, ${scan.count} scanned`;
     return `${matchCount} flagged (score ${score}), ${scan.count} scanned`;
   }
 
   function providerText(p) {
-    if (p.configured === false) return 'Not set up, no API key';
-    if (p.skipped) return `Skipped: ${p.note}`;
-    if (p.ok === false) return `Lookup failed: ${p.error}`;
+    if (p.configured === false) return 'not set up, no api key';
+    if (p.skipped) return `skipped: ${p.note}`;
+    if (p.ok === false) return `lookup failed: ${p.error}`;
     return (p.lines || []).join('\n').slice(0, 1000);
   }
 
@@ -59,7 +59,7 @@ module.exports = ({ need, fail, arg, num }) => {
       if (elapsed < RATE_LIMIT_MS) {
         const wait = Math.ceil((RATE_LIMIT_MS - elapsed) / 1000);
         const { StopExecution } = require('../interpreter');
-        throw new StopExecution(arg(a, 0, 'Please wait %time%s before checking again.').replace('%time%', wait));
+        throw new StopExecution(arg(a, 0, 'chill %time%s before checking again').replace('%time%', wait));
       }
       lastCheckByUser.set(id, Date.now());
       return '';
@@ -196,7 +196,7 @@ module.exports = ({ need, fail, arg, num }) => {
       const entry = storage.addKeyword({ keyword: raw, normalized, category, score: num(scoreText, 'score'), addedBy: ctx.author?.username });
       ctx.json = {
         status: 'added', keyword: entry, label: storage.KEYWORD_CATEGORIES[entry.category]?.label || entry.category,
-        how: isPhrase ? 'Matches any name containing every one of those words, in any order.' : 'Matches that whole word anywhere in a name.',
+        how: isPhrase ? 'catches names with all those words in any order' : 'catches that word anywhere in a name',
         autoNote: AUTO_NOTE,
       };
       return '';

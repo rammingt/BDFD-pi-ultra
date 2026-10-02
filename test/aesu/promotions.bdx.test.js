@@ -25,16 +25,16 @@ describe('promotion commands in BDX', () => {
     const r = await h.run('promote', { options: { action: 'check' } });
     assert.equal(r.stopped, false, r.content);
     const text = h.text(r);
-    assert.match(text, /### Promotion to Guard/);
-    assert.match(text, /Currently Recruit/);
-    assert.match(text, /Run `\/promote action:request` to promote\./);
+    assert.match(text, /### next up: Guard/);
+    assert.match(text, /rn: Recruit/);
+    assert.match(text, /ready, do `\/promote action:request`/);
     assert.match(text, /✅ .+\n`████████████` 2h 30m \/ 2h/);
-    assert.match(text, /General requirements\n• Pass the exam/);
+    assert.match(text, /also needed\n• Pass the exam/);
   });
 
   it('posts a request card for staff, pinging their role', async () => {
     const r = await h.run('promote', { options: { action: 'request' } });
-    assert.match(r.content, /your request is sent/);
+    assert.match(r.content, /request sent/);
     const card = h.client.sent.at(-1);
     assert.equal(card.channelId, '700000000000000010');
     assert.deepEqual(card.payload.allowedMentions, { users: [], roles: ['444'] });
@@ -46,21 +46,21 @@ describe('promotion commands in BDX', () => {
 
   it('only lets promotion staff decide, once', async () => {
     let r = await h.run('aesu:promote_ok', { args: [ME, '20'], messageId: h.card.id, channelId: h.card.channelId });
-    assert.equal(r.content, 'Only <@&444> can decide promotions.');
+    assert.equal(r.content, 'only <@&444> can decide promos');
     r = await h.run('aesu:promote_ok', { args: [ME, '20'], messageId: h.card.id, channelId: h.card.channelId, roles: ['444'] });
     assert.equal(r.stopped, false, r.content);
-    assert.match(r.content, /is now Guard/);
+    assert.match(r.content, /is Guard now/);
     assert.deepEqual(applied, [[ME, 'Guard']]);
     const redrawn = h.client.edits.at(-1);
-    assert.match(h.text({ layout: redrawn.payload.components }), /Approved by <@100000000000000001>\nSet to Guard/);
+    assert.match(h.text({ layout: redrawn.payload.components }), /approved by <@100000000000000001>\nranked Guard/);
     assert.equal(h.buttons({ layout: redrawn.payload.components }).length, 0);
     r = await h.run('aesu:promote_no', { args: [ME, '20'], messageId: h.card.id, channelId: h.card.channelId, roles: ['444'] });
-    assert.equal(r.content, 'That request has already been decided.');
+    assert.equal(r.content, 'someone already handled this one');
   });
 
   it('lists the ranks', async () => {
     const r = await h.run('promote', { options: { action: 'ranks' } });
     assert.equal(r.stopped, false, r.content);
-    assert.match(h.text(r), /` 20` Guard \(needs approval · 2 member\(s\)\)\n2h of Shift Guard, 1 event hosted/);
+    assert.match(h.text(r), /` 20` Guard \(needs approval · 2 ppl\)\n2h of Shift Guard, 1 event hosted/);
   });
 });

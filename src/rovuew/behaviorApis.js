@@ -83,8 +83,8 @@ function activityTags(guild) {
 
 function summarizeServerSweep(data) {
   const guilds = Array.isArray(data.guilds) ? data.guilds : [];
-  const lines = [`Flagged in ${guilds.length} tracked server(s).`];
-  if (data.lastSeen) lines.push(`Last seen: ${data.lastSeen}`);
+  const lines = [`flagged in ${guilds.length} tracked servers`];
+  if (data.lastSeen) lines.push(`last seen: ${data.lastSeen}`);
 
   for (const guild of guilds.slice(0, 5)) {
     const bits = [];
@@ -93,9 +93,9 @@ function summarizeServerSweep(data) {
     if (guild.verifiedLeft) bits.push('confirmed left');
     const tags = activityTags(guild);
     if (tags.length) bits.push(tags.join(', '));
-    lines.push(`- ${guild.name || guild.id}${bits.length ? ` (${bits.join('; ')})` : ''}`);
+    lines.push(`• ${guild.name || guild.id}${bits.length ? ` (${bits.join('; ')})` : ''}`);
   }
-  if (guilds.length > 5) lines.push(`...and ${guilds.length - 5} more, see the JSON.`);
+  if (guilds.length > 5) lines.push(`+${guilds.length - 5} more in the JSON`);
   return lines;
 }
 
@@ -113,7 +113,7 @@ async function checkServerSweep(discordUserId) {
     });
 
     if (res.status === 204) {
-      return { ...base, configured: true, ok: true, flagged: false, lines: ['Not flagged in any tracked server.'] };
+      return { ...base, configured: true, ok: true, flagged: false, lines: ['not flagged anywhere'] };
     }
     if (!res.ok) {
       return {
@@ -136,7 +136,7 @@ async function checkServerSweep(discordUserId) {
         ok: true,
         flagged: false,
         appealed: true,
-        lines: ['Previously flagged, but has since appealed.'],
+        lines: ['was flagged but appealed'],
         detail: data,
       };
     }
@@ -200,7 +200,7 @@ async function checkXTracker(robloxUserId) {
     ok: true,
     flagged: [registry, ownership].some((r) => r.status === 'fulfilled' && r.value.hit),
     partial: registry.status === 'rejected' || ownership.status === 'rejected',
-    lines: [describeLookup('Cheater registry', registry), describeLookup('Cheat ownership', ownership)],
+    lines: [describeLookup('cheater registry', registry), describeLookup('cheat ownership', ownership)],
     detail: {
       registry: registry.status === 'fulfilled' ? registry.value.data : null,
       ownership: ownership.status === 'fulfilled' ? ownership.value.data : null,
@@ -238,7 +238,7 @@ async function checkTase(discordUserId) {
     });
 
     if (res.status === 404 || res.status === 204) {
-      return { ...base, ok: true, flagged: false, lines: ['No TASE record.'] };
+      return { ...base, ok: true, flagged: false, lines: ['no TASE record'] };
     }
     if (res.status === 401 || res.status === 403) {
       // Not expected on a keyless endpoint; worth saying plainly if it happens.
@@ -259,7 +259,7 @@ async function checkTase(discordUserId) {
       ...base,
       ok: true,
       flagged,
-      lines: flagged ? summarizeTase(data) : ['No TASE record.'],
+      lines: flagged ? summarizeTase(data) : ['no TASE record'],
       detail: data,
     };
   } catch (err) {
@@ -278,12 +278,12 @@ function summarizeTase(data) {
     if (!record || typeof record !== 'object') continue;
     const bits = [record.type || record.reason || record.status, record.date || record.createdAt]
       .filter(Boolean)
-      .join(' - ');
-    if (bits) lines.push(`- ${bits}`);
+      .join(', ');
+    if (bits) lines.push(`• ${bits}`);
   }
 
-  if (records.length > 5) lines.push(`...and ${records.length - 5} more, see the JSON.`);
-  return lines.length ? ['Has a TASE record.', ...lines] : ['Has a TASE record; see the JSON.'];
+  if (records.length > 5) lines.push(`+${records.length - 5} more in the JSON`);
+  return lines.length ? ['got a TASE record', ...lines] : ['got a TASE record, check the JSON'];
 }
 
 /* -------------------------------------------------------------------- */

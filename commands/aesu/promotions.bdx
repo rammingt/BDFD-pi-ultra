@@ -1,8 +1,8 @@
 @name promote
 @type slash
-@description Request promotions and check things.
-@option action:string:What to do.:required:request=Request|check=Check|ranks=Ranks|sync=Sync
-@option user:user:Whose progress to check.
+@description promotions
+@option action:string:what u wanna do:required:request=Request|check=Check|ranks=Ranks|sync=Sync
+@option user:user:whose progress
 $c[Runs the snippet for the action picked, like promote_request. Each one is below.]
 $include[promote_$message[action]]
 ---
@@ -12,22 +12,22 @@ $c[/promote action:request. Ask to be promoted.]
 $ephemeral
 $var[r;$promoRequest]
 $if[$var[r]==promoted]
-Promoted to $json[rankName] in the Roblox group. use /verify for update again in #verification.
+promoted to $json[rankName] in the group, do /verify again in #verification
 $elseif[$var[r]==needs_approval]
 $if[$json[posted]==yes]
-You are eligible for what $json[rankName] asks for, your request is sent, waiting for HC to approve.
+u got everything for $json[rankName], request sent, wait for HC
 $else
-You meet everything $json[rankName] asks for, but some dumbass deleted the promotion req channel. Ask a staff member to check `PROMOTION_CHANNEL_ID`.
+u got everything for $json[rankName] but some dumbass deleted the promotion req channel, tell staff to check `PROMOTION_CHANNEL_ID`
 $endif
 $elseif[$var[r]==not_ready]
-Not yet, work more on $json[missing].
+not yet, grind more $json[missing]
 $include[promocard]
 $elseif[$var[r]==manual]
-$json[rankName] needs manual approval.
+$json[rankName] is manual approval only
 $elseif[$var[r]==unconfigured]
-Requirments for $json[rankName] is still WiP, will be updated soon.
+reqs for $json[rankName] still WiP, soon
 $elseif[$var[r]==top]
-Wow you found weird thing here
+wow u found a weird thing here
 $else
 $json[error]
 $endif
@@ -49,56 +49,55 @@ $c[/promote action:ranks. Every rank and what it asks for.]
 $ephemeral
 $promoRanks
 $if[$json[stored]==0]
-$stop[$if[$json[group]==yes;No ranks have been read from the group yet. Run `/promote action:sync`.;Promotions are off: set `ROBLOX_GROUP_ID` and `ROBLOX_GROUP_COOKIE`, then restart.]]
+$stop[$if[$json[group]==yes;no ranks loaded yet, run `/promote action:sync`;promotions off, set `ROBLOX_GROUP_ID` n `ROBLOX_GROUP_COOKIE` then restart]]
 $endif
-$onlyIf[$json[count]>0;The group has no ranks between Guest and the owner, so there is nothing to promote into.]
+$onlyIf[$json[count]>0;group got no ranks between guest n owner, nothing to promote into]
 $addContainer[ranks]
 $addTextDisplay[$jsonList[ranks;`{number}` {name} ({modeLabel}{memberText})
-{requirements|_nothing written yet_};;\n\n]]
+{requirements|_nothing yet_};;\n\n]]
 $addSeparator
-$addTextDisplay[$if[$json[sheets]==yes;Edit these in the Ranks tab of the linked sheet.;Google Sheets is not configured, so nothing can be written against them yet.]]
+$addTextDisplay[$if[$json[sheets]==yes;edit these in the Ranks tab;google sheets not set up so cant edit these yet]]
 $closeContainer
 ---
 @name promote_sync
 @type snippet
 $c[/promote action:sync. Sync with new updates]
 $ephemeral
-$onlyIf[$aesuAllowed[promotion]==yes;$if[$aesuRole[promotion]==;You do not have permission to do that.;Only $aesuRole[promotion] can do that.]]
+$onlyIf[$aesuAllowed[promotion]==yes;$if[$aesuRole[promotion]==;u cant do that;only $aesuRole[promotion] can do that]]
 $var[r;$promoSync]
 $onlyIf[$var[r]==ok;$json[error]]
 $if[$json[sheets]==yes]
-Synced $json[ranks] rank(s) with the sheet.
+synced $json[ranks] ranks w the sheet
 $if[$json[problemCount]>0]
 
-I could not read $json[problemCount] requirement(s):
+couldnt read $json[problemCount] reqs:
 $jsonList[problems;• {@}]
 $endif
 $else
-Read $json[ranks] rank(s) from the group. Set `GOOGLE_SHEET_ID` to write requirements against them.
+got $json[ranks] ranks from the group, set `GOOGLE_SHEET_ID` to write reqs
 $endif
 ---
 @name promocard
 @type snippet
 $c[The promotion check, from $promoCheck's JSON: one bar per requirement of the next rank up.]
 $addContainer[promotion]
-$addSection[### $if[$json[atTop]==yes;Promotions;Promotion to $json[nextName]]
-Currently $json[currentName]$if[$json[squad]!=; · $json[squad]]$if[$json[robloxUsername]!=; · `$json[robloxUsername]`]
-$if[$json[atTop]==yes;This is error message too, but i dont know why so blame malleggc for this.;$if[$json[unconfigured]==yes;so this is error message, blame rammingt for this.;$if[$json[ready]==yes;Run `/promote action:request` to promote.;$json[percent]% of the way there.]]];$userAvatar[$json[discordId]]]
+$addSection[### $if[$json[atTop]==yes;promotions;next up: $json[nextName]]
+rn: $json[currentName]$if[$json[squad]!=; · $json[squad]]$if[$json[robloxUsername]!=; · `$json[robloxUsername]`]
+$if[$json[atTop]==yes;this is error message too but idk why so blame malleggc;$if[$json[unconfigured]==yes;so this is error message, blame rammingt;$if[$json[ready]==yes;ready, do `/promote action:request`;$json[percent]% there]]];$userAvatar[$json[discordId]]]
 $if[$json[requirementCount]>0]
 $addSeparator
 $addTextDisplay[$jsonList[requirements;{icon} {label}
 `{bar}` {amount};;\n\n]]
 $endif
 $if[$json[hiddenCount]>0]
-$addTextDisplay[and $json[hiddenCount] further requirement(s).]
+$addTextDisplay[+ $json[hiddenCount] more]
 $endif
 $if[$json[next;generalCount]>0]
 $addSeparator
-$addTextDisplay[General requirements
-$json[next;generalList]
-*Required to promote*]
+$addTextDisplay[also needed
+$json[next;generalList]]
 $endif
-$addTextDisplay[-# Counted across every shift ever logged$if[$json[hostedEvents]>0; · $json[hostedEvents] event(s) hosted]]
+$addTextDisplay[-# all time shifts$if[$json[hostedEvents]>0; · $json[hostedEvents] events hosted]]
 $closeContainer
 ---
 @name promotion request
@@ -108,24 +107,24 @@ $if[$json[decided]==no]
 $json[staffRole]
 $endif
 $addContainer[request]
-$addTextDisplay[### Promotion to $json[rankName]
-<@$json[discordId]> meets everything $json[rankName] asks for, and is currently $json[currentName].]
+$addTextDisplay[### promo to $json[rankName]
+<@$json[discordId]> got everything for $json[rankName], rn $json[currentName]]
 $addSeparator
-$addTextDisplay[Requirements
+$addTextDisplay[reqs
 $jsonList[requirements;{mark} {description}]]
 $if[$json[next;generalCount]>0]
-$addTextDisplay[Check before approving
+$addTextDisplay[check these first
 $json[next;generalList]]
 $endif
 $if[$json[decided]==yes]
 $addSeparator
-$addTextDisplay[$if[$json[approved]==yes;Approved;Denied] by <@$json[decidedBy]>
+$addTextDisplay[$if[$json[approved]==yes;approved;denied] by <@$json[decidedBy]>
 $json[note]]
 $else
 $addButton[yes;aesu:promote_ok:$json[discordId]:$json[roleId];Approve;success]
 $addButton[no;aesu:promote_no:$json[discordId]:$json[roleId];Deny;danger]
 $endif
-$addTextDisplay[-# Approving sets their rank in the Roblox group. Rover moves their Discord roles.]
+$addTextDisplay[-# approve = rank in the group, rover does discord roles]
 $closeContainer
 $include[promocard]
 ---
@@ -134,11 +133,11 @@ $include[promocard]
 $ephemeral
 $var[r;$promoDecide[approve;$message[1];$message[2]]]
 $onlyIf[$var[r]==ok;$json[error]]
-<@$json[discordId]> is now $json[rankName]. Their Discord roles follow once Rover catches up.
+<@$json[discordId]> is $json[rankName] now, discord roles update when rover catches up
 ---
 @name aesu:promote_no
 @type button
 $ephemeral
 $var[r;$promoDecide[deny;$message[1];$message[2]]]
 $onlyIf[$var[r]==ok;$json[error]]
-<@$json[discordId]>'s promotion request was turned down.
+denied <@$json[discordId]> promo

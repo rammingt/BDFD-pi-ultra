@@ -33,12 +33,12 @@ function isGroupConfigured() {
  */
 function cookie() {
   const value = config.roblox.groupCookie || config.roblox.cookie;
-  if (!value) throw new GroupError('No Roblox account is configured for group actions. Set `ROBLOX_GROUP_COOKIE`.');
+  if (!value) throw new GroupError('no roblox acc set for group stuff, set `ROBLOX_GROUP_COOKIE`');
   return value;
 }
 
 function groupId() {
-  if (!config.roblox.groupId) throw new GroupError('`ROBLOX_GROUP_ID` is not set, so group actions are turned off.');
+  if (!config.roblox.groupId) throw new GroupError('`ROBLOX_GROUP_ID` isnt set so group stuff is off');
   return config.roblox.groupId;
 }
 

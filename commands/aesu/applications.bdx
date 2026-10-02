@@ -2,16 +2,16 @@
 @type snippet
 $c[Applications hold what people wrote about themselves, so the role that decides them decides who reads them.]
 $ephemeral
-$onlyIf[$aesuAllowed[group]==yes;$if[$aesuRole[group]==;You do not have permission to do that.;Only $aesuRole[group] can read applications.]]
+$onlyIf[$aesuAllowed[group]==yes;$if[$aesuRole[group]==;u cant do that;only $aesuRole[group] can read apps]]
 ---
 @name applications
 @type slash
-@description Browse every application the form has received.
-@option action:string:What to do.:required:list=List|post=Post
-@option search:string:Only ones whose answers contain this.
-@option page:integer:Which page to open on.
-@option number:integer:Its number from /applications action:list.
-@option to:integer:Post a range, up to this number.
+@description applications
+@option action:string:what u wanna do:required:list=List|post=Post
+@option search:string:search answers
+@option page:integer:page
+@option number:integer:app number from the list
+@option to:integer:post up to this number
 $c[Runs the snippet for the action picked, like applications_list. Each one is below.]
 $include[applications_$message[action]]
 ---
@@ -37,12 +37,12 @@ $include[applist]
 @type snippet
 $c[One page of the list, from $appList's JSON.]
 $addContainer[list]
-$addTextDisplay[### $if[$json[search]==;Applications;Applications matching "$json[search]"]]
+$addTextDisplay[### $if[$json[search]==;apps;apps w "$json[search]"]]
 $if[$json[total]==0]
-$addTextDisplay[$if[$json[search]==;The responses tab is empty. Check `APPLICATION_TAB` matches the real tab name.;Nothing matches that. The search looks at the answers, not the questions.]]
+$addTextDisplay[$if[$json[search]==;responses tab is empty, check `APPLICATION_TAB` is the right tab name;nothing matches, search only looks at answers]]
 $else
 $addTextDisplay[$jsonList[applications;{line}{unseen}]]
-$addTextDisplay[-# $json[from] to $json[to] of $json[total]$if[$json[pages]>1; · page $json[page]/$json[pages]] · /applications action:post <number> to put one in the channel]
+$addTextDisplay[-# $json[from] to $json[to] of $json[total]$if[$json[pages]>1; · page $json[page]/$json[pages]] · /applications action:post to post one]
 $if[$json[pages]>1]
 $addButton[yes;aesu:app_page:$json[previous]:$json[search];Previous;secondary;$json[atStart]]
 $addButton[no;aesu:app_page:$json[next]:$json[search];Next;secondary;$json[atEnd]]
@@ -53,14 +53,14 @@ $closeContainer
 @name applications_post
 @type snippet
 $c[/applications action:post. Put an application in the applications channel, with Accept and Deny buttons.]
-$onlyIf[$message[number]!=;Fill in the number option for /applications action:post.]
+$onlyIf[$message[number]!=;fill in number for /applications action:post]
 $include[appgate]
 $var[r;$appPost[$message[number];$message[to]]]
 $if[$var[r]==partial]
-$stop[Posted $json[sent] of $json[wanted]. Check the bot can send messages in <#$json[channelId]>.]
+$stop[only posted $json[sent] of $json[wanted], check the bot can talk in <#$json[channelId]>]
 $endif
 $onlyIf[$var[r]==ok;$json[error]]
-Posted $json[sent] application(s) to <#$json[channelId]>$if[$json[title]!=;: $json[title];.]
+posted $json[sent] in <#$json[channelId]>$if[$json[title]!=;: $json[title]]
 ---
 @name application
 @type hook
@@ -72,11 +72,11 @@ $addSeparator
 $addTextDisplay[$jsonList[answers;{question}
 {answer};;\n\n]]
 $if[$json[hiddenCount]>0]
-$addTextDisplay[$json[hiddenCount] further answer(s) in the sheet.]
+$addTextDisplay[+ $json[hiddenCount] more answers in the sheet]
 $endif
 $if[$json[decided]==yes]
 $addSeparator
-$addTextDisplay[$if[$json[accepted]==yes;Accepted;Denied] by <@$json[decidedBy]>$if[$json[reason]!=;
+$addTextDisplay[$if[$json[accepted]==yes;accepted;denied] by <@$json[decidedBy]>$if[$json[reason]!=;
 $json[reason]]$if[$json[note]!=;
 $json[note]]]
 $else
@@ -86,7 +86,7 @@ $if[$json[canCheck]==yes]
 $addButton[no;aesu:app_check:$json[args];Background check;secondary]
 $endif
 $endif
-$addTextDisplay[-# Application #$json[row]$if[$json[submitted]!=; · $json[submitted]]]
+$addTextDisplay[-# app #$json[row]$if[$json[submitted]!=; · $json[submitted]]]
 $closeContainer
 ---
 @name aesu:app_accept
@@ -95,16 +95,16 @@ $c[Opens the reason form. Checked here, because a form has to be the first answe
 $include[appgate]
 $var[r;$appCard]
 $onlyIf[$var[r]==ok;$json[error]]
-$showModal[aesu:app_accept:$message[1]:$message[2]:$message[3];Accept application]
-$addTextInput[reason;Reason (optional);paragraph;no;Anything you want them told. Leave blank for just the good news.;;;500]
+$showModal[aesu:app_accept:$message[1]:$message[2]:$message[3];Accept]
+$addTextInput[reason;Reason (optional);paragraph;no;anything u want them to know, or leave it empty;;;500]
 ---
 @name aesu:app_deny
 @type button
 $include[appgate]
 $var[r;$appCard]
 $onlyIf[$var[r]==ok;$json[error]]
-$showModal[aesu:app_deny:$message[1]:$message[2]:$message[3];Deny application]
-$addTextInput[reason;Reason for denial;paragraph;yes;They are sent this, so write it to be read by them.;;;500]
+$showModal[aesu:app_deny:$message[1]:$message[2]:$message[3];Deny]
+$addTextInput[reason;Why;paragraph;yes;they get sent this so write it for them;;;500]
 ---
 @name aesu:app_accept
 @type modal
@@ -112,33 +112,33 @@ $c[The reason form coming back. Acts on the group, redraws the card and tells th
 $include[appgate]
 $var[r;$appDecide[accept;$message[1];$message[2];$message[3];$input[reason]]]
 $onlyIf[$var[r]==ok;$json[error]]
-Application accepted. $json[note] $json[dmNote]
+accepted, $json[note], $json[dmNote]
 ---
 @name aesu:app_deny
 @type modal
 $include[appgate]
 $var[r;$appDecide[deny;$message[1];$message[2];$message[3];$input[reason]]]
 $onlyIf[$var[r]==ok;$json[error]]
-Application denied. $json[note] $json[dmNote]
+denied, $json[note], $json[dmNote]
 ---
 @name application decision
 @type hook
 $c[DMed to the applicant. Says nothing about Roblox, since whether a join request was waiting is not known here.]
 $addContainer[decision]
 $if[$json[accepted]==yes]
-$addTextDisplay[### Your application was accepted
-Welcome$if[$json[guildName]!=; to $json[guildName]].]
+$addTextDisplay[### ur app got accepted
+welcome$if[$json[guildName]!=; to $json[guildName]]]
 $else
-$addTextDisplay[### Your application was not accepted
-Thank you for applying$if[$json[guildName]!=; to $json[guildName]]. On this occasion your application was not successful.]
+$addTextDisplay[### ur app got denied
+thx for applying$if[$json[guildName]!=; to $json[guildName]] but its a no this time]
 $endif
 $if[$json[reason]!=]
-$addTextDisplay[Reason
+$addTextDisplay[why
 $json[reason]]
 $endif
 $if[$json[accepted]==no]
 $if[$json[formUrl]!=]
-$addTextDisplay[Applying again
+$addTextDisplay[apply again here
 $json[formUrl]]
 $endif
 $endif
@@ -148,15 +148,15 @@ $closeContainer
 @type button
 $c[Runs the applicant through RoVuew. Private to whoever asked: it is somebody's record, and the channel may not be staff only.]
 $ephemeral
-$onlyIf[$aesuAllowed[group]==yes;You do not have permission to run a background check.]
+$onlyIf[$aesuAllowed[group]==yes;u cant run checks]
 $var[r;$appCheck[$message[2];$message[3]]]
 $onlyIf[$var[r]==ok;$json[error]]
 $addContainer[check]
-$addTextDisplay[### Background check: $json[username]
-$if[$json[flagged]==yes;Something was found. Read it before deciding.;$if[$json[incomplete]==yes;Nothing found, but not everything answered. Treat this as a partial all clear.;Nothing found.]]]
+$addTextDisplay[### bg check: $json[username]
+$if[$json[flagged]==yes;found something, read it first;$if[$json[incomplete]==yes;nothing found but some checks didnt answer, kinda clear;all clear]]]
 $if[$json[private]==yes]
-$addTextDisplay[Inventory is private
-Their items could not be read, so only the reputation checks below ran.]
+$addTextDisplay[inventory private
+couldnt see items, only the rep checks ran]
 $endif
 $if[$jsonCount[sections]>0]
 $addSeparator
@@ -165,13 +165,13 @@ $addTextDisplay[$jsonList[sections;{title}
 $endif
 $if[$json[reputation]!=]
 $addSeparator
-$addTextDisplay[Reputation
+$addTextDisplay[rep
 $json[reputation]]
 $endif
 $if[$json[appeals]!=]
-$addTextDisplay[Appeals
+$addTextDisplay[appeals
 $json[appeals]]
 $endif
-$addTextDisplay[-# Roblox $json[userId]$if[$json[discordId]!=; · Discord $json[discordId]; · no Discord id, so Discord side checks were skipped]$if[$json[score]!=; · score $json[score]]]
+$addTextDisplay[-# roblox $json[userId]$if[$json[discordId]!=; · discord $json[discordId]; · no discord id so discord checks got skipped]$if[$json[score]!=; · score $json[score]]]
 $closeContainer
 $addButton[yes;$json[profile];Roblox profile;link]

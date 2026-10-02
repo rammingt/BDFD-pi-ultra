@@ -14,19 +14,19 @@ describe('event commands in BDX', () => {
   it('posts an event with a button per sign up option', async () => {
     const r = await h.run('event', { userId: HOST, options: { action: 'create', name: 'Patrol', start: '2h', type: 'shift_guard', roles: 'Guard:2, Medic' } });
     assert.equal(r.stopped, false, r.content);
-    assert.match(r.content, /Patrol is up in <#700000000000000009>/);
-    id = /Event id `(\w+)`/.exec(r.content)[1];
+    assert.match(r.content, /Patrol posted in <#700000000000000009>/);
+    id = /id `(\w+)`/.exec(r.content)[1];
     const post = h.client.sent.at(-1);
     assert.equal(post.channelId, '700000000000000009');
     const ids = h.buttons({ layout: post.payload.components }).map((b) => b.custom_id);
     assert.deepEqual(ids, [`aesu:event_join:${id}:guard`, `aesu:event_join:${id}:medic`, `aesu:event_join:${id}:declined`, `aesu:event_end:${id}`, `aesu:event_cancel:${id}`]);
-    assert.match(h.text({ layout: post.payload.components }), /Guard \(0\/2\)\nNobody yet/);
+    assert.match(h.text({ layout: post.payload.components }), /Guard \(0\/2\)\nnobody yet/);
   });
 
   it('turns away bad input', async () => {
     const r = await h.run('event', { userId: HOST, options: { action: 'create', name: 'X', start: 'whenever', type: 'shift_guard' } });
     assert.equal(r.stopped, true);
-    assert.match(r.content, /start/i);
+    assert.match(r.content, /isnt a time/);
   });
 
   it('needs a linked account to sign up, but not to decline', async () => {
@@ -35,9 +35,9 @@ describe('event commands in BDX', () => {
     assert.match(r.content, /\/connect/);
     r = await h.run('aesu:event_join', { userId: GUEST, args: [id, 'declined'] });
     assert.equal(r.stopped, false, r.content);
-    assert.equal(r.content, 'Put down as Cannot make it.');
+    assert.equal(r.content, 'ok put u down as Cant make it');
     const redraw = h.client.edits.at(-1);
-    assert.match(h.text({ layout: redraw.payload.components }), /Cannot make it \(1\)\n<@100000000000000002>/);
+    assert.match(h.text({ layout: redraw.payload.components }), /Cant make it \(1\)\n<@100000000000000002>/);
   });
 
   it('lets a linked member sign up and shows it on the post', async () => {
@@ -45,7 +45,7 @@ describe('event commands in BDX', () => {
     await h.store.upsertLink({ discordId: GUEST, robloxId: '55', robloxUsername: 'guest', robloxDisplayName: 'Guest', accessToken: null, refreshToken: null, tokenExpiresAt: null, linkedAt: now, updatedAt: now });
     const r = await h.run('aesu:event_join', { userId: GUEST, args: [id, 'guard'] });
     assert.equal(r.stopped, false, r.content);
-    assert.match(r.content, /Signed up as Guard/);
+    assert.match(r.content, /signed up as Guard/);
     assert.match(h.text({ layout: h.client.edits.at(-1).payload.components }), /Guard \(1\/2\)\n<@100000000000000002>/);
   });
 
@@ -62,19 +62,19 @@ describe('event commands in BDX', () => {
     config.discord.staffRoleId = '555';
     try {
       let r = await h.run('aesu:event_end', { userId: GUEST, args: [id] });
-      assert.match(r.content, /Only the host or a staff member/);
+      assert.match(r.content, /only the host or staff/);
       r = await h.run('aesu:event_end', { userId: HOST, args: [id] });
-      assert.match(r.content, /has not started yet/);
+      assert.match(r.content, /hasnt started yet/);
       await h.events.begin(id, Date.now());
       const ping = h.client.sent.at(-1);
-      assert.match(h.text({ layout: ping.payload.components, content: '' }) || ping.payload.content, /Patrol is starting now\. <@100000000000000002>/);
+      assert.match(h.text({ layout: ping.payload.components, content: '' }) || ping.payload.content, /Patrol starting now <@100000000000000002>/);
       assert.deepEqual(ping.payload.allowedMentions, { users: [GUEST], roles: [] });
       r = await h.run('aesu:event_end', { userId: HOST, args: [id] });
       assert.equal(r.stopped, false, r.content);
-      assert.match(r.content, /Patrol is closed\. 0 attendee\(s\)/);
+      assert.match(r.content, /Patrol ended, time logged for 0/);
       const final = h.client.edits.at(-1);
       assert.equal(h.buttons({ layout: final.payload.components }).length, 0, 'buttons go once it is over');
-      assert.match(h.text({ layout: final.payload.components }), /Nobody was seen in a tracked game/);
+      assert.match(h.text({ layout: final.payload.components }), /nobody was in game long enough/);
     } finally {
       config.discord.staffRoleId = '';
     }

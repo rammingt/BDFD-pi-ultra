@@ -1,16 +1,16 @@
 @name academy
 @type slash
-@description The academy and its phases.
-@option action:string:What to do.:required:info=Info|set=Set phase|remove=Remove|list=List|sync=Sync
-@option user:user:Who
-@option phase:string:Which phase::orientation=Orientation (phase 1)|academy=Academy (phase 2)|final_exam=Final exam (phase 3)|waiting=Waiting for division (phase 4)
+@description academy
+@option action:string:what u wanna do:required:info=Info|set=Set phase|remove=Remove|list=List|sync=Sync
+@option user:user:who
+@option phase:string:phase::orientation=Orientation (phase 1)|academy=Academy (phase 2)|final_exam=Final exam (phase 3)|waiting=Waiting for division (phase 4)
 $c[Runs the snippet for the action picked, like academy_set. Each one is below.]
 $include[academy_$message[action]]
 ---
 @name academygate
 @type snippet
 $c[Moving people needs ACADEMY_STAFF_ROLE_ID, or SHIFT_STAFF_ROLE_ID when that is not set.]
-$onlyIf[$aesuAllowed[academy]==yes;$if[$aesuRole[academy]==;You do not have permission to do that.;Only $aesuRole[academy] can do that.]]
+$onlyIf[$aesuAllowed[academy]==yes;$if[$aesuRole[academy]==;u cant do that;only $aesuRole[academy] can do that]]
 ---
 @name academy_info
 @type snippet
@@ -21,13 +21,13 @@ $var[r;$academyInfo[$var[who]]]
 $onlyIf[$var[r]==ok;$json[error]]
 $addContainer[academy]
 $addSection[### $displayName[$var[who]]
-Phase $json[phaseNumber] · $json[phaseLabel]
-Since $json[since];$userAvatar[$var[who]]]
+phase $json[phaseNumber] · $json[phaseLabel]
+since $json[since];$userAvatar[$var[who]]]
 $addSeparator
-$addTextDisplay[Shift time: $json[worked]$if[$json[roblox]!=;
-Roblox: $json[roblox]]$if[$json[movedBy]!=;
-Moved by $json[movedBy]]$if[$json[notes]!=;
-Notes: $json[notes]]]
+$addTextDisplay[shift time: $json[worked]$if[$json[roblox]!=;
+roblox: $json[roblox]]$if[$json[movedBy]!=;
+moved by $json[movedBy]]$if[$json[notes]!=;
+notes: $json[notes]]]
 $closeContainer
 ---
 @name academy_set
@@ -35,17 +35,17 @@ $closeContainer
 $c[/academy action:set. Puts somebody on a phase, adding them if they are new. Their phase role and the sheet follow.]
 $ephemeral
 $include[academygate]
-$onlyIf[$message[user]!=;Pick who with the user option.]
-$onlyIf[$message[phase]!=;Pick a phase with the phase option.]
+$onlyIf[$message[user]!=;pick a user]
+$onlyIf[$message[phase]!=;pick a phase]
 $var[r;$academySet[$message[user];$message[phase]]]
 $onlyIf[$var[r]==ok;$json[error]]
 $if[$json[added]==yes]
-<@$json[discordId]> joined the academy on phase $json[phaseNumber], $json[phaseLabel].
+<@$json[discordId]> added, phase $json[phaseNumber] $json[phaseLabel]
 $else
-<@$json[discordId]> moved from $json[was] to phase $json[phaseNumber], $json[phaseLabel].
+<@$json[discordId]> moved $json[was] to phase $json[phaseNumber] $json[phaseLabel]
 $endif
 $if[$json[roleNote]!=]
-Their role was not changed: $json[roleNote]
+role didnt change tho: $json[roleNote]
 $endif
 ---
 @name academy_remove
@@ -53,12 +53,12 @@ $endif
 $c[/academy action:remove. Takes somebody out of the academy and off every phase role. Their shifts are kept.]
 $ephemeral
 $include[academygate]
-$onlyIf[$message[user]!=;Pick who with the user option.]
+$onlyIf[$message[user]!=;pick a user]
 $var[r;$academyRemove[$message[user]]]
 $onlyIf[$var[r]==ok;$json[error]]
-<@$json[discordId]> is out of the academy. They were on $json[was].
+<@$json[discordId]> out of the academy, was $json[was]
 $if[$json[roleNote]!=]
-Their role was not changed: $json[roleNote]
+role didnt change tho: $json[roleNote]
 $endif
 ---
 @name academy_list
@@ -67,9 +67,9 @@ $c[/academy action:list. Everybody in the academy by phase, or one phase with th
 $ephemeral
 $academyList[$message[phase]]
 $addContainer[list]
-$addTextDisplay[### Academy · $json[count] people]
+$addTextDisplay[### academy · $json[count]]
 $addSeparator
-$addTextDisplay[$jsonList[phases;Phase {number} · {label} ({count})
+$addTextDisplay[$jsonList[phases;phase {number} · {label} ({count})
 {list};;\n\n]]
 $closeContainer
 ---
@@ -80,4 +80,4 @@ $ephemeral
 $include[academygate]
 $var[r;$academySync]
 $onlyIf[$var[r]==ok;$json[error]]
-Synced with the Academy tab. $json[added] added, $json[moved] moved and $json[removed] removed from the sheet.
+synced w the sheet, $json[moved] moved$if[$json[added]>0;, $json[added] new]$if[$json[removed]>0;, $json[removed] gone]

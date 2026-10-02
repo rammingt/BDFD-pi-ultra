@@ -2,7 +2,7 @@
 
 /** Reserved key for the built-in "cannot make it" option every event gets. */
 const DECLINED_ROLE_KEY = 'declined';
-const DECLINED_LABEL = 'Cannot make it';
+const DECLINED_LABEL = 'Cant make it';
 
 /** Two rows of buttons, five per row. */
 const MAX_ROLES = 10;
@@ -48,27 +48,27 @@ function parseRoles(input) {
       }
     }
 
-    if (label.length === 0) throw new EventInputError(`\`${part}\` has no name.`);
+    if (label.length === 0) throw new EventInputError(`\`${part}\` got no name`);
     if (label.length > MAX_LABEL_LENGTH) {
-      throw new EventInputError(`\`${label}\` is too long. Keep option names under ${MAX_LABEL_LENGTH} characters.`);
+      throw new EventInputError(`\`${label}\` too long, keep it under ${MAX_LABEL_LENGTH} chars`);
     }
     if (limit !== null && (limit < 1 || limit > MAX_LIMIT)) {
-      throw new EventInputError(`The limit on \`${label}\` has to be between 1 and ${MAX_LIMIT}.`);
+      throw new EventInputError(`limit on \`${label}\` gotta be 1 to ${MAX_LIMIT}`);
     }
 
     const key = slugify(label);
-    if (!key) throw new EventInputError(`\`${label}\` needs at least one letter or number in it.`);
+    if (!key) throw new EventInputError(`\`${label}\` needs a letter or number in it`);
     if (key === DECLINED_ROLE_KEY) {
-      throw new EventInputError(`\`${label}\` clashes with the built-in ${DECLINED_LABEL} option. Pick another name.`);
+      throw new EventInputError(`\`${label}\` clashes with ${DECLINED_LABEL}, pick another name`);
     }
-    if (seen.has(key)) throw new EventInputError(`\`${label}\` is listed twice.`);
+    if (seen.has(key)) throw new EventInputError(`\`${label}\` is in there twice`);
 
     seen.add(key);
     roles.push({ key, label, limit });
   }
 
-  if (roles.length === 0) throw new EventInputError('List at least one sign-up option.');
-  if (roles.length > MAX_ROLES) throw new EventInputError(`That is ${roles.length} options. The most an event can have is ${MAX_ROLES}.`);
+  if (roles.length === 0) throw new EventInputError('need at least one signup option');
+  if (roles.length > MAX_ROLES) throw new EventInputError(`thats ${roles.length} options, max is ${MAX_ROLES}`);
 
   return roles;
 }
@@ -138,13 +138,12 @@ const DAY_MS = 86_400_000;
 const UNIT_MS = { d: DAY_MS, h: 3_600_000, m: 60_000 };
 
 const START_TIME_HELP =
-  'Use `now`, a delay like `90m` / `2h30m` / `1d`, a clock time like `21:00`, or a full ' +
-  '`YYYY-MM-DD HH:MM`. Clock times are read in the event timezone.';
+  'use `now`, `90m`, `21:00` or `YYYY-MM-DD HH:MM` (event timezone)';
 
 /** Accepts the handful of shapes people actually type into a Discord option. */
 function parseStartTime(input, timezone, now = Date.now()) {
   const text = input.trim();
-  if (!text) throw new EventInputError(`No start time given. ${START_TIME_HELP}`);
+  if (!text) throw new EventInputError(`no start time, ${START_TIME_HELP}`);
 
   if (/^now$/i.test(text)) return now;
 
@@ -193,7 +192,7 @@ function parseStartTime(input, timezone, now = Date.now()) {
     return text.length <= 10 ? Number(text) * 1000 : Number(text);
   }
 
-  throw new EventInputError(`\`${input}\` is not a start time I understand. ${START_TIME_HELP}`);
+  throw new EventInputError(`\`${input}\` isnt a time, ${START_TIME_HELP}`);
 }
 
 /**

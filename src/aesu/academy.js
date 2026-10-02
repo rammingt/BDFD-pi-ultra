@@ -73,7 +73,7 @@ class Academy {
     const all = phaseRoleIds();
     if (all.length === 0) return null;
     const guild = await resolveGuild(this.client, guildId);
-    if (!guild) return 'I could not work out which server to change roles in. Set DISCORD_GUILD_ID.';
+    if (!guild) return 'cant tell which server, set DISCORD_GUILD_ID';
     try {
       const member = await guild.members.fetch(discordId);
       const stale = all.filter((id) => id !== wantedId && member.roles.cache.has(id));

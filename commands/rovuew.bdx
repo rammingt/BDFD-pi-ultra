@@ -1,83 +1,83 @@
 @name check
 @type slash
-@description Check a Roblox user against the flagged list, or everything at once
-@option user:string:Roblox username or user ID:required
-@option type:string:What to check. Accessories when left out.::accessories=Accessories|clothing=Clothing|badges=Badges|full=Full
-@option discord:string:Their Discord user ID, for the Server Sweep and TASE lookups in a full check
+@description check a roblox user
+@option user:string:roblox username or id:required
+@option type:string:what to check, empty = accessories::accessories=Accessories|clothing=Clothing|badges=Badges|full=Full
+@option discord:string:their discord id for server sweep n TASE (full only)
 $c[Runs check_accessories, check_clothing, check_badges or check_full below.]
 $include[check_$if[$message[type]==;accessories;$message[type]]]
 ---
 @name check_accessories
 @type snippet
 $var[kind;accessories]
-$var[title;Accessory check]
+$var[title;accessories]
 $var[jsonlabel;accessory]
 $include[rvsingle]
 ---
 @name check_clothing
 @type snippet
 $var[kind;clothing]
-$var[title;Clothing check]
+$var[title;clothing]
 $var[jsonlabel;clothing]
 $include[rvsingle]
 ---
 @name check_badges
 @type snippet
 $var[kind;badges]
-$var[title;Badge check]
+$var[title;badges]
 $var[jsonlabel;badge]
 $include[rvsingle]
 ---
 @name rvsingle
 @type snippet
 $c[Shared by the accessory, clothing and badge checks. Needs kind, title and jsonlabel set first.]
-$rvCooldown[Please wait %time%s before checking again.]
+$rvCooldown[chill %time%s before checking again]
 $rvCheck[$message[user];$var[kind]]
-$onlyIf[$json[status]!=not_found;Could not find a Roblox user called $message[user].]
-$onlyIf[$json[status]!=private;$json[username]'s inventory is private.]
+$onlyIf[$json[status]!=not_found;cant find a roblox user called $message[user]]
+$onlyIf[$json[status]!=private;$json[username] inventory is private]
 $var[token;$jsonStash]
 $addContainer[result]
 $addTextDisplay[## $var[title]: $json[username]]
 $addSeparator
-$addTextDisplay[$if[$json[verdict]==flagged;Flagged · total score $json[score];$if[$json[verdict]==odd names;Nothing on the flagged list, but some item names looked odd (score $json[autoScore]);Clear, nothing flagged]]
-$if[$json[scanIncomplete]==yes;Scan incomplete: $json[scanError];Scanned $json[scanned] $json[noun], $json[matchCount] flagged.]]
+$addTextDisplay[$if[$json[verdict]==flagged;flagged · score $json[score];$if[$json[verdict]==odd names;nothing flagged but some names look sus (score $json[autoScore]);clean]]
+$if[$json[scanIncomplete]==yes;scan didnt finish: $json[scanError];scanned $json[scanned] $json[noun], $json[matchCount] flagged]]
 $if[$json[matchCount]>0]
 $addSeparator
-$addTextDisplay[### On the flagged list · score $json[score]
-$jsonList[matches;• [{name}]({url}) · score {score} · {reason};15;;• ...and {n} more, in the JSON]]
+$addTextDisplay[### flagged · score $json[score]
+$jsonList[matches;• [{name}]({url}) · score {score} · {reason};15;;• +{n} more in the JSON]]
 $endif
 $if[$json[autoCount]>0]
 $addSeparator
-$addTextDisplay[### Automatic name matches · score $json[autoScore]
-$jsonList[auto;• [{name}]({url}) · {score} · {reasons};10;;• ...and {n} more, in the JSON]
+$addTextDisplay[### sus names · score $json[autoScore]
+$jsonList[auto;• [{name}]({url}) · {score} · {reasons};10;;• +{n} more in the JSON]
 -# $json[autoNote]]
 $endif
-$addTextDisplay[-# Roblox ID $json[userId]]
+$addTextDisplay[-# roblox id $json[userId]]
 $closeContainer
-$addButton[no;rvjson:$var[token];View full $var[jsonlabel] list (JSON);secondary]
+$addButton[no;rvjson:$var[token];Full $var[jsonlabel] list (JSON);secondary]
 ---
 @name check_full
 @type snippet
-$rvCooldown[Please wait %time%s before checking again.]
+$rvCooldown[chill %time%s before checking again]
 $rvCheck[$message[user];full;$message[discord]]
-$onlyIf[$json[status]!=not_found;Could not find a Roblox user called $message[user].]
+$onlyIf[$json[status]!=not_found;cant find a roblox user called $message[user]]
 $var[token;$jsonStash]
 $addContainer[result]
-$addTextDisplay[## Full check: $json[username]]
+$addTextDisplay[## full check: $json[username]]
 $addSeparator
-$addTextDisplay[$if[$json[verdict]==flagged;Flagged · total score $json[totalScore];$if[$json[verdict]==odd names;Nothing on the flagged list, but some item names looked odd (score $json[autoScore]);$if[$json[verdict]==incomplete;No flags found, but at least one source didn't report, so this isn't a full all clear.;Clear, nothing found in any source.]]]]
-$addTextDisplay[Accessories: $json[accessories]
-Clothing: $json[clothing]
-Badges: $json[badges]]
+$addTextDisplay[$if[$json[verdict]==flagged;flagged · score $json[totalScore];$if[$json[verdict]==odd names;nothing flagged but some names look sus (score $json[autoScore]);$if[$json[verdict]==incomplete;nothing found but a source didnt answer, so not fully clear;clean everywhere]]]]
+$addTextDisplay[accessories: $json[accessories]
+clothing: $json[clothing]
+badges: $json[badges]]
 $if[$json[matchCount]>0]
 $addSeparator
-$addTextDisplay[### Flagged items ($json[matchCount], score $json[totalScore])
-$jsonList[matches;• [{name}]({url}) · score {score} · {reason};10;;• ...and {n} more, in the JSON]]
+$addTextDisplay[### flagged ($json[matchCount], score $json[totalScore])
+$jsonList[matches;• [{name}]({url}) · score {score} · {reason};10;;• +{n} more in the JSON]]
 $endif
 $if[$json[autoCount]>0]
 $addSeparator
-$addTextDisplay[### Automatic name matches ($json[autoCount], score $json[autoScore])
-$jsonList[auto;• [{name}]({url}) · {score} · {reasons};8;;• ...and {n} more, in the JSON]
+$addTextDisplay[### sus names ($json[autoCount], score $json[autoScore])
+$jsonList[auto;• [{name}]({url}) · {score} · {reasons};8;;• +{n} more in the JSON]
 -# $json[autoNote]]
 $endif
 $addSeparator
@@ -86,116 +86,116 @@ $addTextDisplay[$jsonList[providers;{name}
 
 ]]
 $if[$json[appealsUrl]!=]
-$addTextDisplay[Appeals: anyone moderated because of this result has to be pointed to $json[appealsUrl]]
+$addTextDisplay[appeals: if u mod someone over this, send them to $json[appealsUrl]]
 $endif
-$addTextDisplay[-# Roblox ID $json[userId]$if[$message[discord]!=; · Discord ID $message[discord]]]
+$addTextDisplay[-# roblox id $json[userId]$if[$message[discord]!=; · discord id $message[discord]]]
 $closeContainer
-$addButton[no;rvjson:$var[token];View full check list (JSON);secondary]
+$addButton[no;rvjson:$var[token];Full list (JSON);secondary]
 ---
 @name rvjson
 @type button
 $c[The "View full list (JSON)" buttons. Only the person who ran the command can use theirs, for 15 minutes. The file goes to their DMs, since phones often can't open files in "only you can see this" replies.]
 $ephemeral
 $var[state;$jsonUnstash[$message[1];yes]]
-$onlyIf[$var[state]!=expired;This list has expired. Run the command again to refresh it.]
-$onlyIf[$var[state]!=notyours;Only the person who ran the command can view this. Run it yourself to get your own button.]
+$onlyIf[$var[state]!=expired;expired, run it again]
+$onlyIf[$var[state]!=notyours;not ur button, run it urself]
 $dm
 $attachFile[$json[filename];$jsonPretty[file]]
-Here's the full list.
+full list
 ---
 @name searchcatalog
 @type slash
-@description Search catalog accessories and clothing by keyword, then add matches to the flagged list
-@option keyword:string:What to search the catalog for:required
-@option category:string:Which categories to search (default both)::accessory=Accessories only|clothing=Clothing only|classicshirt=Classic shirts only|classicpants=Classic pants only|both=Both
-@option pages:integer:Pages of 30 results to fetch (1 to 5, default 1)
-@option reason:string:Reason to record on any item you add from the results
-@option score:integer:Severity score for any item you add from the results (default 1)
+@description search the catalog n flag stuff
+@option keyword:string:search for:required
+@option category:string:where to search, empty = both::accessory=Accessories|clothing=Clothing|classicshirt=Classic shirts|classicpants=Classic pants|both=Both
+@option pages:integer:pages of 30 (1 to 5)
+@option reason:string:reason for anything u add
+@option score:integer:score for anything u add (default 1)
 $ephemeral
-$onlyIf[$rvIsAdmin==true;You need the Manage Server permission (or the admin role) to search and add items.]
-$rvCooldown[Please wait %time%s before searching again.]
+$onlyIf[$rvIsAdmin==true;need manage server or the admin role for this]
+$rvCooldown[chill %time%s before searching again]
 $rvSearch[$message[keyword];$message[category];$message[pages]]
 $jsonSet[reason;$message[reason]]
 $jsonSet[score;$message[score]]
 $var[token;$jsonStash]
 $addContainer[search]
-$addTextDisplay[## Catalog search]
+$addTextDisplay[## catalog search]
 $addSeparator
-$addTextDisplay[$json[count] $json[categoryLabel] match(es) for `$json[keyword]`.$if[$message[reason]!=;
-Anything added will be filed as: $message[reason] (score $if[$message[score]!=;$message[score];1])]$if[$json[hasErrors]==yes;
-Incomplete: $json[errors]]]
+$addTextDisplay[$json[count] $json[categoryLabel] for `$json[keyword]`$if[$message[reason]!=;
+added stuff gets: $message[reason] (score $if[$message[score]!=;$message[score];1])]$if[$json[hasErrors]==yes;
+didnt finish: $json[errors]]]
 $if[$json[count]==0]
-$addTextDisplay[Nothing in $json[categoryLabel] matched that.]
+$addTextDisplay[nothing in $json[categoryLabel]]
 $else
-$addTextDisplay[$jsonList[results;`{n}` [{name}]({url}) · {assetTypeName} · `{assetId}`{note};30;;...and {n} more, all in the JSON.]]
+$addTextDisplay[$jsonList[results;`{n}` [{name}]({url}) · {assetTypeName} · `{assetId}`{note};30;;+{n} more in the JSON]]
 $if[$json[allFlagged]==yes]
-$addTextDisplay[-# Every match is already on the flagged list.]
+$addTextDisplay[-# all of these r flagged already]
 $else
-$addSelectMenu[rvsearchadd:$var[token];Pick items to add to the flagged list ($json[addableCount] available);1;25]
+$addSelectMenu[rvsearchadd:$var[token];pick stuff to flag ($json[addableCount]);1;25]
 $addSelectOptions[addable;{name};{assetId};{assetTypeName} · ID {assetId}]
-$addTextDisplay[-# $if[$json[addableCount]>25;The menu holds the first 25. Narrow the keyword to reach the rest.;Pick one or more items to add them to the flagged list.]]
+$addTextDisplay[-# $if[$json[addableCount]>25;menu only fits 25, search something narrower for the rest;pick as many as u want]]
 $endif
 $endif
 $closeContainer
-$addButton[no;rvjson:$var[token];View full search list (JSON);secondary]
+$addButton[no;rvjson:$var[token];Full list (JSON);secondary]
 ---
 @name rvsearchadd
 @type select
 $c[The menu under /searchcatalog. Adds the picked items to the flagged list and leaves the menu usable for more.]
 $ephemeral
 $var[state;$jsonUnstash[$message[1];yes]]
-$onlyIf[$var[state]!=expired;This search has expired. Run /searchcatalog again to get a fresh list.]
-$onlyIf[$var[state]!=notyours;Only the person who ran the search can add from it.]
-$onlyIf[$rvIsAdmin==true;You need the Manage Server permission (or the admin role) to add these.]
+$onlyIf[$var[state]!=expired;search expired, run /searchcatalog again]
+$onlyIf[$var[state]!=notyours;not ur search]
+$onlyIf[$rvIsAdmin==true;need manage server or the admin role for this]
 $rvSearchAdd[$selectedValues[,]]
-Added $json[addedCount] item(s) to the flagged list.
+flagged $json[addedCount]
 $jsonList[added;• {name} · {type} · ID {assetId} · score {score}]
-$if[$json[skipped]>0;$json[skipped] were already flagged, so they were skipped.;]
+$if[$json[skipped]>0;skipped $json[skipped], already flagged;]
 ---
 @name resolvelink
 @type slash
-@description Turn a Roblox share link (or its code) into an asset ID, name, and catalog URL
-@option link:string:The Roblox share link (roblox.com/share?code=...) or just the code:required
-$rvCooldown[Please wait %time%s before trying again.]
+@description share link to item
+@option link:string:share link or code:required
+$rvCooldown[chill %time%s before trying again]
 $rvResolveLink[$message[link]]
-$onlyIf[$json[status]!=invalid_link;That doesn't look like a Roblox share link or code. Paste the full link (roblox.com/share?code=...) or just the code by itself.]
-$onlyIf[$json[status]!=not_found;Roblox did not resolve that link to an item. It may be expired, already used, or not an item share link.$if[$json[detail]!=;
+$onlyIf[$json[status]!=invalid_link;thats not a share link or code, paste the whole link or just the code]
+$onlyIf[$json[status]!=not_found;roblox cant find an item for that link, might be expired or not an item link$if[$json[detail]!=;
 `$json[detail]`]]
 $var[token;$jsonStash]
 $addContainer[link]
-$addTextDisplay[## Share link resolved]
+$addTextDisplay[## share link]
 $addSeparator
 $addTextDisplay[<$json[url]>
-Name: $if[$json[name]!=;$json[name];Unknown (ID $json[assetId])]
-Asset ID: `$json[assetId]`
-Category: $if[$json[assetTypeName]!=;$json[assetTypeName] ($json[type]);Unknown]]
+name: $if[$json[name]!=;$json[name];idk (id $json[assetId])]
+asset id: `$json[assetId]`
+category: $if[$json[assetTypeName]!=;$json[assetTypeName] ($json[type]);idk]]
 $if[$json[name]==]
-$addTextDisplay[-# Resolved the asset ID, but the catalog lookup for its name and category failed.]
+$addTextDisplay[-# got the id but the catalog lookup for the name failed]
 $endif
 $closeContainer
-$addButton[no;rvjson:$var[token];View full item list (JSON);secondary]
+$addButton[no;rvjson:$var[token];Full item (JSON);secondary]
 ---
 @name autoflag
 @type slash
-@description Manage the keywords the automatic name scan looks for
-@option action:string:What to do.:required:add=Add|remove=Remove|list=List
-@option keyword:string:The word or phrase to watch for
-@option reason:string:What kind of wording this is::nsfw=NSFW|political=Political|inappropriate=Inappropriate
-@option score:integer:Score a match adds (0 to 100)
+@description sus name keywords
+@option action:string:what u wanna do:required:add=Add|remove=Remove|list=List
+@option keyword:string:word or phrase
+@option reason:string:what kind::nsfw=NSFW|political=Political|inappropriate=Inappropriate
+@option score:integer:score (0 to 100)
 $c[Runs the snippet for the action picked, like autoflag_add. Each one is below.]
 $include[autoflag_$message[action]]
 ---
 @name autoflag_add
 @type snippet
 $c[/autoflag action:add. Add a keyword that item names are automatically scanned for]
-$onlyIf[$message[keyword]!=;Fill in the keyword option for /autoflag action:add.]
-$onlyIf[$message[reason]!=;Fill in the reason option for /autoflag action:add.]
-$onlyIf[$message[score]!=;Fill in the score option for /autoflag action:add.]
-$onlyIf[$rvIsAdmin==true;You need the Manage Server permission (or the admin role) to manage automatic keywords.]
+$onlyIf[$message[keyword]!=;fill in keyword for /autoflag action:add]
+$onlyIf[$message[reason]!=;fill in reason for /autoflag action:add]
+$onlyIf[$message[score]!=;fill in score for /autoflag action:add]
+$onlyIf[$rvIsAdmin==true;need manage server or the admin role for this]
 $rvKeywordAdd[$message[keyword];$message[reason];$message[score]]
-$onlyIf[$json[status]!=problem;That keyword will not work: $json[problem].]
-$onlyIf[$json[status]!=covered;$if[$json[covered;custom]==yes;That is already covered by the custom keyword `$json[covered;term]` (score $json[covered;score]). Remove that one first if you want to change it.;That is already caught by the built in list as "$json[covered;reason]" (score $json[covered;score]), so adding it would only double count. Nothing was added.]]
-Added `$json[keyword;keyword]` to the automatic name scan.
+$onlyIf[$json[status]!=problem;that keyword wont work: $json[problem]]
+$onlyIf[$json[status]!=covered;$if[$json[covered;custom]==yes;already covered by `$json[covered;term]` (score $json[covered;score]), remove that first to change it;the built in list already catches that as "$json[covered;reason]" (score $json[covered;score]), nothing added]]
+added `$json[keyword;keyword]`
 $json[label] · score $json[keyword;score]
 $json[how]
 -# $json[autoNote]
@@ -203,77 +203,77 @@ $json[how]
 @name autoflag_remove
 @type snippet
 $c[/autoflag action:remove. Remove a keyword from the automatic name scan]
-$onlyIf[$message[keyword]!=;Fill in the keyword option for /autoflag action:remove.]
-$onlyIf[$rvIsAdmin==true;You need the Manage Server permission (or the admin role) to manage automatic keywords.]
+$onlyIf[$message[keyword]!=;fill in keyword for /autoflag action:remove]
+$onlyIf[$rvIsAdmin==true;need manage server or the admin role for this]
 $rvKeywordRemove[$message[keyword]]
-$onlyIf[$json[removed]==yes;No custom keyword matches that.]
-Removed the keyword `$json[keyword;keyword]` from the automatic scan.
+$onlyIf[$json[removed]==yes;no keyword like that]
+removed `$json[keyword;keyword]`
 ---
 @name autoflag_list
 @type snippet
 $c[/autoflag action:list. List the custom automatic keywords]
-$onlyIf[$rvIsAdmin==true;You need the Manage Server permission (or the admin role) to manage automatic keywords.]
+$onlyIf[$rvIsAdmin==true;need manage server or the admin role for this]
 $rvKeywords
-$onlyIf[$json[count]>0;No custom keywords yet. The built in word list still runs on its own.]
+$onlyIf[$json[count]>0;no custom keywords yet, the built in list still runs]
 $addContainer[keywords]
-$addTextDisplay[## Automatic keywords]
+$addTextDisplay[## keywords]
 $addSeparator
 $addTextDisplay[$jsonList[keywords;• `{keyword}` · score {score} · {label};40]]
-$addTextDisplay[-# $json[count] custom keyword(s), on top of the built in list. $json[autoNote]]
+$addTextDisplay[-# $json[count] custom, plus the built in list · $json[autoNote]]
 ---
 @name flag
 @type slash
-@description Manage the flagged item list
-@option action:string:What to do.:required:add=Add|remove=Remove|list=List
-@option id:string:The Roblox badge ID or asset ID
-@option name:string:Name to label it with (found automatically for accessories when left out)
-@option type:string:Badge, accessory or clothing? Leave blank to detect it::badge=Badge|accessory=Accessory|clothing=Clothing
-@option reason:string:Why this is flagged
-@option score:integer:Severity score, counted up by the check commands (default 1)
-@option link:string:Roblox catalog or badge link (optional)
+@description flagged items
+@option action:string:what u wanna do:required:add=Add|remove=Remove|list=List
+@option id:string:badge or asset id
+@option name:string:name, empty = auto
+@option type:string:type, empty = auto::badge=Badge|accessory=Accessory|clothing=Clothing
+@option reason:string:why
+@option score:integer:score (default 1)
+@option link:string:catalog or badge link
 $c[Runs the snippet for the action picked, like flag_add. Each one is below.]
 $include[flag_$message[action]]
 ---
 @name flag_add
 @type snippet
 $c[/flag action:add. Add a badge, accessory, or clothing item to the flagged list]
-$onlyIf[$message[id]!=;Fill in the id option for /flag action:add.]
-$onlyIf[$rvIsAdmin==true;You need the Manage Server permission (or the admin role) to add flags.]
-$onlyIf[$isNumber[$message[id]]==true;The ID has to be a plain number: the badge ID or the asset ID from the Roblox link.]
+$onlyIf[$message[id]!=;fill in id for /flag action:add]
+$onlyIf[$rvIsAdmin==true;need manage server or the admin role for this]
+$onlyIf[$isNumber[$message[id]]==true;id has to be just a number, the badge or asset id from the link]
 $rvFlagAdd[$message[id];$message[name];$message[type];$message[reason];$message[score];$message[link]]
-$onlyIf[$json[status]!=not_found;Could not find a $if[$json[type]!=;$json[type];badge, accessory or clothing item] with ID $message[id] on Roblox. Double check the ID.]
-$onlyIf[$json[status]!=unverified;Could not tell what kind of item ID $message[id] is (Roblox no longer allows public badge lookups). Run this again with type set, and name too if it's a badge.]
-$onlyIf[$json[status]!=exists;$json[flag;name] is already on the flagged list, so nothing was added.
+$onlyIf[$json[status]!=not_found;nothing on roblox with id $message[id], check it]
+$onlyIf[$json[status]!=unverified;cant tell what $message[id] is (roblox blocks badge lookups now), run it again with type set, and name too if its a badge]
+$onlyIf[$json[status]!=exists;$json[flag;name] is already flagged
 $json[flag;type] · ID $json[flag;assetId] · score $json[flag;score]
-Reason: $json[flag;reason]
-Use /flag action:remove first if you want to change it.]
-Added $json[flag;name] to the flagged list.
+reason: $json[flag;reason]
+/flag action:remove it first to change it]
+flagged $json[flag;name]
 $json[flag;type] · ID $json[flag;assetId] · score $json[flag;score]
-Reason: $json[flag;reason]
-$if[$json[placeholderName]==true;Couldn't verify a name on Roblox, so a placeholder was used. Remove and add it again with name set if you want something clearer.;]
+reason: $json[flag;reason]
+$if[$json[placeholderName]==true;couldnt get a name from roblox so its a placeholder, add it again with name set if u want;]
 ---
 @name flag_remove
 @type snippet
 $c[/flag action:remove. Remove an item from the flagged list]
-$onlyIf[$message[name]!=;Fill in the name option for /flag action:remove.]
-$onlyIf[$rvIsAdmin==true;You need the Manage Server permission (or the admin role) to remove flags.]
+$onlyIf[$message[name]!=;fill in name for /flag action:remove]
+$onlyIf[$rvIsAdmin==true;need manage server or the admin role for this]
 $rvFlagRemove[$message[name]]
-$onlyIf[$json[removed]==yes;No flag found matching $message[name].]
-Removed flag $json[flag;name].
+$onlyIf[$json[removed]==yes;no flag like $message[name]]
+unflagged $json[flag;name]
 ---
 @name flag_list
 @type snippet
 $c[/flag action:list. List all currently flagged items]
 $rvFlags
-$onlyIf[$json[count]>0;No items are currently flagged.]
+$onlyIf[$json[count]>0;nothing flagged rn]
 $addContainer[flags]
-$addTextDisplay[## Flagged items]
+$addTextDisplay[## flagged]
 $addSeparator
 $addTextDisplay[$jsonList[flags;• [{name}]({url}) · score {score} · {type} · `{assetId}`
   {reason};25]]
-$addTextDisplay[-# $json[count] flag(s), combined score $json[totalScore]$if[$json[count]>25; · showing the top 25]]
+$addTextDisplay[-# $json[count] flags, total score $json[totalScore]$if[$json[count]>25; · top 25 only]]
 $closeContainer
-$addButton[no;rvflagsjson;View full flagged list (JSON);secondary]
+$addButton[no;rvflagsjson;Full list (JSON);secondary]
 ---
 @name rvflagsjson
 @type button
@@ -282,4 +282,4 @@ $ephemeral
 $rvFlags
 $dm
 $attachFile[$json[filename];$jsonPretty[file]]
-Here's the full flagged list.
+full flagged list

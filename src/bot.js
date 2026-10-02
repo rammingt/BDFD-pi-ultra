@@ -94,7 +94,7 @@ async function startBot({ token, commandsDir, dataFile, prefix, watch = true, be
 
   client.on(Events.InteractionCreate, (i) => runSafe('interaction', () => answer(i).catch(async (e) => {
     // Never leave somebody looking at "This interaction failed" with no idea why.
-    const note = { content: 'Something went wrong handling that. Try again in a moment.', ephemeral: true };
+    const note = { content: 'something broke, try again in a sec', ephemeral: true };
     if (i.isRepliable()) await (i.deferred || i.replied ? i.followUp(note) : i.reply(note)).catch(() => {});
     throw e;
   })));
@@ -160,9 +160,9 @@ async function startBot({ token, commandsDir, dataFile, prefix, watch = true, be
       try {
         const u = await client.users.fetch(String(r.dm).replace(/\D/g, ''));
         await u.send(payload);
-        payload = { content: 'Sent to your DMs.' };
+        payload = { content: 'sent to ur DMs' };
       } catch {
-        payload = withNote(payload, "I couldn't DM you, so here it is instead. Turn on DMs from server members to get these in DMs.");
+        payload = withNote(payload, 'couldnt DM u so here it is, turn on DMs from server members to get these in DMs');
       }
       r.ephemeral = true;
     }

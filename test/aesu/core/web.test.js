@@ -108,7 +108,7 @@ describe('web server', () => {
   it('rejects a state it never issued', async () => {
     const response = await realFetch(`${origin}/oauth/callback?code=abc&state=made-up`);
     assert.equal(response.status, 400);
-    assert.match(await response.text(), /already used or is not one I issued/);
+    assert.match(await response.text(), /already used or isnt from this bot/);
   });
 
   it('rejects an expired state and does not link anything', async () => {

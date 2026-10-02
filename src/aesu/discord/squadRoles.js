@@ -38,7 +38,7 @@ async function applySquad(
 ) {
   const guild = await resolveGuild(client, guildId);
   if (!guild) {
-    return { ok: false, reason: 'I could not work out which server to do that in. Set `DISCORD_GUILD_ID`.' };
+    return { ok: false, reason: 'cant tell which server, set `DISCORD_GUILD_ID`' };
   }
 
   const { wanted, unwanted } = squadRoleChange(squad);
@@ -57,7 +57,7 @@ async function applySquad(
     return { ok: true };
   } catch (error) {
     if (error instanceof DiscordAPIError && error.code === 10007) {
-      return { ok: false, reason: `They are not in ${guild.name}.` };
+      return { ok: false, reason: `theyre not in ${guild.name}` };
     }
     return { ok: false, reason: explainRoleError(error, guild, 'squad roles') };
   }

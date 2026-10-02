@@ -37,10 +37,10 @@ describe('linking without Roblox OAuth', () => {
     const r = await h.run('connect', { options: {} });
     assert.equal(r.stopped, false, r.content);
     assert.match(h.text(r), /### Me\n@me_on_roblox/);
-    assert.match(h.text(r), /Is this your Roblox account\?/);
+    assert.match(h.text(r), /this u\?/);
     const yes = await h.run('aesu:link_yes');
     assert.equal(yes.stopped, false, yes.content);
-    assert.match(h.text(yes), /Linked to Me \(@me_on_roblox\)/);
+    assert.match(h.text(yes), /linked to Me \(@me_on_roblox\)/);
     assert.equal((await h.store.getLinkByDiscordId(ME)).robloxId, '55');
   });
 
@@ -51,7 +51,7 @@ describe('linking without Roblox OAuth', () => {
     const code = /`(AESU [A-Z0-9]{5})`/.exec(h.text(r))[1];
     r = await h.run('aesu:link_yes', { userId: other });
     assert.equal(r.stopped, true);
-    assert.match(r.content, /is not in the About of someone yet/);
+    assert.match(r.content, /isnt in someone About yet/);
     assert.equal(await h.store.getLinkByDiscordId(other), null);
 
     about = `hello there ${code.toLowerCase()} :)`;
@@ -62,8 +62,8 @@ describe('linking without Roblox OAuth', () => {
 
   it('says so when there is no such user, or nothing to go on', async () => {
     let r = await h.run('connect', { userId: '100000000000000010', options: { username: 'nobody_here' } });
-    assert.match(r.content, /There is no Roblox account called nobody_here/);
+    assert.match(r.content, /no roblox acc called nobody_here/);
     r = await h.run('connect', { userId: '100000000000000010', options: {} });
-    assert.match(r.content, /Bloxlink does not know your Roblox account/);
+    assert.match(r.content, /bloxlink doesnt know ur roblox/);
   });
 });

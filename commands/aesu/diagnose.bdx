@@ -1,10 +1,10 @@
 @name diagnose
 @type slash
-@description Check why the bot is or is not detecting your game sessions.
+@description why the bot cant see u in game
 $ephemeral
 $aesuDiagnose
 $addContainer[diagnose]
-$addTextDisplay[### Diagnose]
+$addTextDisplay[### diagnose]
 $addTextDisplay[$jsonList[sections;{title} {mark}
 {text};;\n\n]]
 $if[$json[verdict]!=]

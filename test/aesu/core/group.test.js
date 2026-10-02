@@ -108,7 +108,7 @@ describe('robloxErrorMessage', () => {
 
   it('falls back to something readable when the body is not JSON', () => {
     const error = new HttpError(401, '<html>nope</html>', new Headers(), 'https://groups.roblox.com/');
-    assert.match(robloxErrorMessage(error), /cookie is invalid or expired/);
+    assert.match(robloxErrorMessage(error), /cookie is dead or expired/);
   });
 
   it('describes a plain error too', () => {

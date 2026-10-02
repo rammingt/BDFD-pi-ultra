@@ -1,9 +1,9 @@
 @name shift
 @type slash
-@description Manage and review shifts.
-@option action:string:What to do.:required:manage=Manage|history=History
-@option user:user:Whose shifts to list. Defaults to you.
-@option limit:integer:How many to show (1 to 25).
+@description shift stuff
+@option action:string:what u wanna do:required:manage=Manage|history=History
+@option user:user:whose shifts, empty = urs
+@option limit:integer:how many (1 to 25)
 $c[Runs the snippet for the action picked, like shift_manage. Each one is below.]
 $include[shift_$message[action]]
 ---
@@ -23,9 +23,9 @@ $ephemeral
 $var[who;$if[$message[user]==;$authorID;$message[user]]]
 $shiftHistory[$var[who];$if[$message[limit]==;10;$message[limit]]]
 $addContainer[history]
-$addSection[### $displayName[$var[who]]'s recent shifts;$userAvatar[$var[who]]]
+$addSection[### $displayName[$var[who]] recent shifts;$userAvatar[$var[who]]]
 $if[$json[count]==0]
-$addTextDisplay[No shifts recorded yet.]
+$addTextDisplay[no shifts yet]
 $else
 $addTextDisplay[$jsonList[shifts;{startedDate} · {worked} · {typeLabel}{note}]]
 $endif
@@ -34,10 +34,10 @@ $aesuJoinWarning
 ---
 @name checktime
 @type slash
-@description See how much time has been logged on shift.
-@option user:user:Whose time to check. Defaults to you.
-@option range:string:Time period to total up. Defaults to all time.::today=Today|week=Last 7 days|month=Last 30 days|all=All time
-@option public:boolean:Post the result where everyone can see it.
+@description check shift time
+@option user:user:whose time, empty = urs
+@option range:string:time range, empty = all time::today=Today|week=Last 7 days|month=Last 30 days|all=All time
+@option public:boolean:show it to everyone
 $if[$message[public]!=true]
 $ephemeral
 $endif
@@ -45,26 +45,26 @@ $var[who;$if[$message[user]==;$authorID;$message[user]]]
 $var[r;$shiftTime[$var[who];$message[range]]]
 $onlyIf[$var[r]==ok;$json[error]]
 $addContainer[time]
-$addSection[### $displayName[$var[who]]'s tracked time
-$if[$json[linked]==yes;Roblox: $json[roblox];No Roblox account linked] · Range: $json[rangeLabel];$userAvatar[$var[who]]]
+$addSection[### $displayName[$var[who]] shift time
+$if[$json[linked]==yes;roblox: $json[roblox];no roblox linked] · $json[rangeLabel];$userAvatar[$var[who]]]
 $addSeparator
-$addTextDisplay[Total on shift: $json[worked] ($json[workedHours])
-Shifts: $json[shiftCount]
-Average: $json[average]
-Longest: $json[longest]
-On break: $json[onBreak]
-Last shift: $json[lastShift]]
+$addTextDisplay[total: $json[worked] ($json[workedHours])
+shifts: $json[shiftCount]
+avg: $json[average]
+longest: $json[longest]
+break time: $json[onBreak]
+last shift: $json[lastShift]]
 $addSeparator
-$addTextDisplay[Squad: $json[squad]
-Events hosted: $json[hostedText]]
+$addTextDisplay[squad: $json[squad]
+events hosted: $json[hostedText]]
 $if[$json[byTypeCount]>0]
 $addSeparator
-$addTextDisplay[By type
-$jsonList[byType;{label}: {worked} over {shifts}]]
+$addTextDisplay[per type
+$jsonList[byType;{label}: {worked}, {shifts}]]
 $endif
 $if[$json[open]!=]
 $addSeparator
-$addTextDisplay[Right now: $json[open;statusLabel] on a $json[open;typeLabel], $json[open;worked] so far (not counted above).]
+$addTextDisplay[rn: $json[open;statusLabel], $json[open;typeLabel], $json[open;worked] so far (not in the total yet)]
 $endif
 $closeContainer
 $aesuJoinWarning
@@ -74,32 +74,32 @@ $aesuJoinWarning
 $c[Draws the shift panel from $shiftPanel's JSON. state is none, active or on_break.]
 $addContainer[panel]
 $if[$json[state]==none]
-$addTextDisplay[### Shift panel]
+$addTextDisplay[### shift panel]
 $if[$json[selected]!=]
-$addTextDisplay[Selected $json[selected;label]. $json[selected;description]
-Press Start shift when you're ready.]
+$addTextDisplay[picked $json[selected;label]$if[$json[selected;description]!=;, $json[selected;description]]
+hit start when ur ready]
 $else
-$addTextDisplay[Pick the kind of shift you are running from the menu below, then press Start shift.]
+$addTextDisplay[pick ur shift type below then hit start]
 $endif
-$addTextDisplay[-# Your shift ends once you leave the game.]
-$addSelectMenu[aesu:panel_type;Select the type of shift]
+$addTextDisplay[-# leaving the game ends ur shift]
+$addSelectMenu[aesu:panel_type;shift type]
 $addSelectOptions[types;{label};{value};{description};{selected}]
-$addButton[yes;aesu:panel_start:$if[$json[selected]==;none;$json[selected;value]];Start shift;success;$if[$json[selected]==;yes;no]]
+$addButton[yes;aesu:panel_start:$if[$json[selected]==;none;$json[selected;value]];Start;success;$if[$json[selected]==;yes;no]]
 $addButton[no;aesu:panel_refresh;Refresh;secondary]
 $else
 $addTextDisplay[### $json[shift;typeLabel]
 $json[shift;statusLabel]]
 $addSeparator
-$addTextDisplay[Started: $json[shift;startedRelative]
-Time on shift: $json[shift;worked]
-Elapsed: $json[shift;elapsed]
-Breaks: $json[shift;breaks]
-Game: $json[shift;game]]
-$addTextDisplay[-# Shift $json[shift;short]]
+$addTextDisplay[started $json[shift;startedRelative]
+time: $json[shift;worked]
+elapsed: $json[shift;elapsed]
+breaks: $json[shift;breaks]
+game: $json[shift;game]]
+$addTextDisplay[-# shift $json[shift;short]]
 $if[$json[state]==on_break]
-$addButton[yes;aesu:panel_resume;Resume shift;success]
+$addButton[yes;aesu:panel_resume;Resume;success]
 $else
-$addButton[yes;aesu:panel_break;Take a break;primary]
+$addButton[yes;aesu:panel_break;Break;primary]
 $endif
 $addButton[no;aesu:panel_end;End shift;danger]
 $addButton[no;aesu:panel_refresh;Refresh;secondary]
@@ -146,21 +146,21 @@ $updateMessage
 $var[r;$shiftEnd]
 $onlyIf[$var[r]==ok;$json[error]]
 $addContainer[ended]
-$addTextDisplay[Shift ended. $json[worked] banked on your $json[typeLabel]$if[$json[breakCount]>0; and $json[breakTime] on break].]
+$addTextDisplay[shift done, $json[worked] banked on ur $json[typeLabel]$if[$json[breakCount]>0;, $json[breakTime] on break]]
 $closeContainer
 ---
 @name aesu:prompt_accept
 @type button
 $c[The "Log this as a shift" button on a join prompt. $message[1] is who the prompt is for.]
 $ephemeral
-$onlyIf[$message[1]==$authorID;That prompt belongs to someone else.]
+$onlyIf[$message[1]==$authorID;not ur prompt]
 $var[r;$shiftPromptAnswer[yes]]
 $if[$var[r]==running]
 $include[shiftpanel]
 $else
 $addContainer[pick]
-$addTextDisplay[Pick what you are running in $if[$json[gameName]==;the game;$json[gameName]] and your shift starts right away.]
-$addSelectMenu[aesu:prompt_start;Pick a type to start your shift]
+$addTextDisplay[pick what ur running in $if[$json[gameName]==;the game;$json[gameName]], shift starts right away]
+$addSelectMenu[aesu:prompt_start;shift type]
 $addSelectOptions[types;{label};{value};{description}]
 $closeContainer
 $endif
@@ -168,9 +168,9 @@ $endif
 @name aesu:prompt_decline
 @type button
 $ephemeral
-$onlyIf[$message[1]==$authorID;That prompt belongs to someone else.]
+$onlyIf[$message[1]==$authorID;not ur prompt]
 $var[r;$shiftPromptAnswer[no]]
-Nothing was logged. Run `/shift action:manage` if you change your mind.
+ok nothing logged, `/shift action:manage` if u change ur mind
 ---
 @name aesu:prompt_start
 @type select
@@ -182,8 +182,8 @@ $include[shiftpanel]
 ---
 @name connect
 @type slash
-@description Link your Roblox account.
-@option username:string:Your Roblox username
+@description link ur roblox
+@option username:string:ur roblox username
 $c[Bloxlink is asked first. If it knows them they only confirm. If they type a username Bloxlink does not vouch for, they prove it with a code in their Roblox About.]
 $ephemeral
 $var[r;$linkStart[$message[username]]]
@@ -200,12 +200,12 @@ $addSection[### $json[displayName]
 $json[profile];$json[avatar]]
 $addSeparator
 $if[$json[via]==bloxlink]
-$addTextDisplay[Is this your Roblox account?]
-$addButton[yes;aesu:link_yes;Yes, link it;success]
+$addTextDisplay[this u?]
+$addButton[yes;aesu:link_yes;Yep;success]
 $else
-$addTextDisplay[To prove this account is yours, put this code anywhere in your Roblox profile About, then press Done.
+$addTextDisplay[put this code in ur roblox About, then hit Done
 `$json[code]`
-You can take it out again once you are linked.]
+u can delete it after]
 $addButton[yes;aesu:link_yes;Done;success]
 $endif
 $addButton[no;aesu:link_no;Cancel;secondary]
@@ -220,7 +220,7 @@ $stop[$json[error]]
 $endif
 $onlyIf[$var[r]==ok;$json[error]]
 $addContainer[link]
-$addTextDisplay[Linked to $json[displayName] (@$json[username]). I will ping you when I see you join a tracked game.]
+$addTextDisplay[linked to $json[displayName] (@$json[username]), u get pinged when u join a tracked game]
 $closeContainer
 ---
 @name aesu:link_no
@@ -228,17 +228,17 @@ $closeContainer
 $updateMessage
 $linkCancel
 $addContainer[link]
-$addTextDisplay[Nothing was linked. Run /connect with your Roblox username to pick the right account.]
+$addTextDisplay[nothing linked, run /connect with ur roblox username]
 $closeContainer
 ---
 @name disconnect
 @type slash
-@description Unlink your Roblox account and stop presence tracking.
+@description unlink ur roblox
 $ephemeral
 $var[r;$disconnect]
 $onlyIf[$var[r]==ok;$json[error]]
-Unlinked $json[displayName] (`$json[username]`).$if[$json[closed]==yes; Your running shift was ended and saved.]
-Your recorded shift history is kept. Run `/connect` again whenever you want.
+unlinked $json[displayName] (`$json[username]`)$if[$json[closed]==yes;, ur running shift got ended and saved]
+shift history stays, `/connect` whenever
 ---
 @name shift log
 @type hook
@@ -247,24 +247,24 @@ $addContainer[log]
 $addTextDisplay[### $json[typeLabel]
 <@$json[discordId]> · $json[statusLabel]]
 $addSeparator
-$addTextDisplay[Started: $json[started] ($json[startedRelative])
-$if[$json[running]==no;Ended: $json[ended] ($json[endedRelative]);Elapsed: $json[elapsed]]
-Time on shift: $json[worked]
-Breaks: $json[breaks]
-Game: $json[game]
-Roblox: $json[roblox]]
+$addTextDisplay[started: $json[started] ($json[startedRelative])
+$if[$json[running]==no;ended: $json[ended] ($json[endedRelative]);elapsed: $json[elapsed]]
+time: $json[worked]
+breaks: $json[breaks]
+game: $json[game]
+roblox: $json[roblox]]
 $if[$json[endReasonLabel]!=]
-$addTextDisplay[Closed by: $json[endReasonLabel]]
+$addTextDisplay[ended cuz: $json[endReasonLabel]]
 $endif
-$addTextDisplay[-# Shift $json[short] · from the $json[sourceLabel]]
+$addTextDisplay[-# shift $json[short] · $json[sourceLabel]]
 $closeContainer
 ---
 @name shift auto end
 @type hook
 $c[DMed when a shift closes itself: they left the game, or it hit MAX_SHIFT_HOURS.]
 $addContainer[dm]
-$addTextDisplay[Your $json[typeLabel] shift was closed because $if[$json[endReason]==left_game;you left $if[$json[gameName]==;the game;$json[gameName]];it ran past the $json[maxHours] hour limit].
-$json[worked] was banked$if[$json[breakCount]>0; ($json[breakTime] on break)]. Use `/checktime` to see your totals.]
+$addTextDisplay[ur $json[typeLabel] shift ended, $if[$json[endReason]==left_game;u left $if[$json[gameName]==;the game;$json[gameName]];it went past $json[maxHours]h]
+$json[worked] banked$if[$json[breakCount]>0; ($json[breakTime] break)], `/checktime` for totals]
 $closeContainer
 ---
 @name shift prompt
@@ -272,12 +272,11 @@ $closeContainer
 $c[Posted in SHIFT_PROMPT_CHANNEL_ID when somebody is seen joining a tracked game. Only they get pinged.]
 <@$json[discordId]>
 $addContainer[prompt]
-$addTextDisplay[### Are you on shift?
-You just joined $if[$json[gameName]==;a tracked game;$json[gameName]]$if[$json[robloxUsername]!=; as `$json[robloxUsername]`].
-Do you want this session logged as a shift?]
-$addButton[yes;aesu:prompt_accept:$json[discordId];Log this as a shift;success]
-$addButton[no;aesu:prompt_decline:$json[discordId];Not now;secondary]
-$addTextDisplay[-# Only you can use these buttons.]
+$addTextDisplay[### on shift?
+joined $if[$json[gameName]==;a tracked game;$json[gameName]]$if[$json[robloxUsername]!=; as `$json[robloxUsername]`], log it as a shift?]
+$addButton[yes;aesu:prompt_accept:$json[discordId];Log it;success]
+$addButton[no;aesu:prompt_decline:$json[discordId];Nah;secondary]
+$addTextDisplay[-# only u can press these]
 $closeContainer
 ---
 @name shift prompt closed
@@ -285,11 +284,11 @@ $closeContainer
 $c[Replaces the join prompt once it is answered or runs out. accepted is yes or no.]
 $addContainer[prompt]
 $if[$json[accepted]==yes]
-$addTextDisplay[### Logging this session
-Shift panel opened for $if[$json[gameName]==;the tracked game;$json[gameName]].]
+$addTextDisplay[### logging it
+shift panel opened for $if[$json[gameName]==;the game;$json[gameName]]]
 $else
-$addTextDisplay[### Not logging this session
-No shift was started for $if[$json[gameName]==;the tracked game;$json[gameName]].]
+$addTextDisplay[### not logged
+no shift for $if[$json[gameName]==;the game;$json[gameName]]]
 $endif
 $closeContainer
 ---
@@ -297,6 +296,6 @@ $closeContainer
 @type hook
 $c[DMed once somebody finishes /connect.]
 $addContainer[linked]
-$addTextDisplay[Your Roblox account $json[displayName] (`$json[username]`) is linked.
-I will ping you when I see you join one of the tracked games so you can log the session as a shift. You can also open the panel any time with `/shift action:manage`.]
+$addTextDisplay[roblox linked: $json[displayName] (`$json[username]`)
+u get pinged when u join a tracked game, or just use `/shift action:manage`]
 $closeContainer

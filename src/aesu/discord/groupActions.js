@@ -20,18 +20,17 @@ async function resolveTarget(store, input) {
     const link = await store.getLinkByDiscordId(value);
     if (!link) {
       throw new GroupError(
-        `<@${value}> has not linked a Roblox account with \`/connect\`, so I cannot tell who they are in game. ` +
-          'Pass their Roblox username instead.',
+        `<@${value}> didnt link roblox with \`/connect\`, use their roblox username instead`,
       );
     }
     const user = await findUserById(link.robloxId);
-    if (!user) throw new GroupError(`Roblox has no account with the id \`${link.robloxId}\` any more.`);
+    if (!user) throw new GroupError(`no roblox acc with id \`${link.robloxId}\` anymore`);
     return { user, discordId: value };
   }
 
   if (kind === 'robloxId') {
     const user = await findUserById(value);
-    if (!user) throw new GroupError(`Roblox has no account with the id \`${value}\`.`);
+    if (!user) throw new GroupError(`no roblox acc with id \`${value}\``);
     return { user, discordId: (await store.getLinkByRobloxId(user.id))?.discordId ?? null };
   }
 
@@ -45,7 +44,7 @@ async function resolveTarget(store, input) {
  */
 async function targetFromUsername(store, username) {
   const user = await findUserByUsername(username);
-  if (!user) throw new GroupError(`Roblox has no account called \`${username}\`.`);
+  if (!user) throw new GroupError(`no roblox acc called \`${username}\``);
 
   const link = await store.getLinkByRobloxId(user.id);
   return { user, discordId: link?.discordId ?? null };

@@ -148,19 +148,19 @@ class EventManager {
   ) {
     return this.locks.run(eventId, async () => {
       const event = await this.store.getEvent(eventId);
-      if (!event) throw new EventInputError('That event no longer exists.');
-      if (event.status === 'ended') throw new EventInputError('That event is over.');
-      if (event.status === 'cancelled') throw new EventInputError('That event was cancelled.');
+      if (!event) throw new EventInputError('that event is gone');
+      if (event.status === 'ended') throw new EventInputError('that events over');
+      if (event.status === 'cancelled') throw new EventInputError('that event got cancelled');
 
       const role = findRole(event.roles, roleKey);
       if (!role && roleKey !== DECLINED_ROLE_KEY) {
-        throw new EventInputError('That sign-up option is not on this event any more.');
+        throw new EventInputError('that option isnt on the event anymore');
       }
 
       const signups = await this.store.listSignups(eventId);
       const existing = signups.find((signup) => signup.discordId === discordId) ?? null;
       if (existing?.roleKey === roleKey) {
-        throw new EventInputError(`You are already down as ${role?.label ?? DECLINED_LABEL}.`);
+        throw new EventInputError(`ur already down as ${role?.label ?? DECLINED_LABEL}`);
       }
 
       if (role?.limit != null) {

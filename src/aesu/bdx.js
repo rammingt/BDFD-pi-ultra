@@ -86,13 +86,12 @@ module.exports = ({ need, fail, arg, num }) => {
     if (refusal === 'hidden') return VISIBILITY_HINT;
     if (refusal === 'not_in_game') {
       return isAnyGameType(type)
-        ? `Join a Roblox game first. A ${label} shift logs whichever game you are playing.`
-        : `You have to be in one of the tracked games before you can start a ${label} shift.`;
+        ? `join a roblox game first, ${label} logs whatever game ur in`
+        : `gotta be in a tracked game to start ${label}`;
     }
     const alternatives = anyGameTypeLabels();
-    return `You are in ${playing ? `${playing}` : 'a game'}, which is not one of the tracked games, `
-      + `so it cannot be logged as a ${label} shift.`
-      + (alternatives.length > 0 ? ` Pick ${alternatives.join(' or ')} if that is what you are running.` : '');
+    return `ur in ${playing ? `${playing}` : 'a game'} which isnt tracked, cant log it as ${label}`
+      + (alternatives.length > 0 ? `, pick ${alternatives.join(' or ')} if thats what ur running` : '');
   }
 
   /**
@@ -108,7 +107,7 @@ module.exports = ({ need, fail, arg, num }) => {
       return { game: await lastSeenGame(store, ctx.author.id) };
     }
     const link = await store.getLinkByDiscordId(ctx.author.id);
-    if (!link) return { code: 'not_linked', error: 'Link your Roblox account with `/connect` first. The bot has to see you in game to start a shift.' };
+    if (!link) return { code: 'not_linked', error: 'link ur roblox with `/connect` first, the bot gotta see u in game' };
 
     // Somebody who joined seconds ago must not be turned away by a cached answer.
     const { checkJoinVisibility } = mod('roblox/visibility');
@@ -139,7 +138,7 @@ module.exports = ({ need, fail, arg, num }) => {
   }
 
   const RANGES = {
-    today: 'Today (UTC)', week: 'Last 7 days', month: 'Last 30 days', all: 'All time',
+    today: 'today (UTC)', week: 'last 7 days', month: 'last 30 days', all: 'all time',
   };
 
 
@@ -182,18 +181,18 @@ module.exports = ({ need, fail, arg, num }) => {
       const { config } = mod('config/index');
       const { DEFAULT_ROLES, EventInputError, isValidTimezone, parseRoles, parseStartTime } = mod('events/types');
       const { isShiftType } = mod('shifts/types');
-      if (!allowed(ctx, 'staff')) return refuse(ctx, 'denied', 'You do not have permission to schedule events.');
+      if (!allowed(ctx, 'staff')) return refuse(ctx, 'denied', 'u cant make events');
 
       const name = rawName.trim();
       const details = arg(a, 3).trim() || null;
       const imageUrl = arg(a, 4).trim() || null;
       const timezone = arg(a, 6).trim() || config.events.timezone;
       const invalid = (error) => refuse(ctx, 'invalid', error);
-      if (name.length === 0 || name.length > 100) return invalid('The event name has to be 1 to 100 characters.');
-      if (details && details.length > 1500) return invalid('Keep the details under 1500 characters.');
-      if (imageUrl && !isHttpUrl(imageUrl)) return invalid('The image has to be an `http://` or `https://` link.');
-      if (!isValidTimezone(timezone)) return invalid(`\`${timezone}\` is not a timezone I know. Use an IANA name like \`Asia/Seoul\`.`);
-      if (!isShiftType(type.trim())) return invalid('That is not a shift type I know about.');
+      if (name.length === 0 || name.length > 100) return invalid('name has to be 1 to 100 chars');
+      if (details && details.length > 1500) return invalid('details too long, keep it under 1500');
+      if (imageUrl && !isHttpUrl(imageUrl)) return invalid('image has to be a http or https link');
+      if (!isValidTimezone(timezone)) return invalid(`\`${timezone}\` isnt a timezone, use like \`Asia/Seoul\``);
+      if (!isShiftType(type.trim())) return invalid('thats not a shift type');
 
       let startsAt;
       let roles;
@@ -210,8 +209,8 @@ module.exports = ({ need, fail, arg, num }) => {
       const channel = await resolveSendableChannel(client, channelId);
       if (!channel) {
         return refuse(ctx, 'no_channel', channelId
-          ? `I cannot post in <#${channelId}>. Give me View Channel and Send Messages there.`
-          : 'There is nowhere to post the event. Set `EVENT_CHANNEL_ID` or pass the `channel` option.');
+          ? `cant post in <#${channelId}>, the bot needs perms there`
+          : 'nowhere to post it, set `EVENT_CHANNEL_ID` or pick a channel');
       }
 
       const event = await events.create({
@@ -238,7 +237,7 @@ module.exports = ({ need, fail, arg, num }) => {
     eventInfo: { async fn(ctx, a) {
       const id = need(a, 1, '$eventInfo[id]')[0].trim();
       const event = await eventFor(ctx, id);
-      if (!event) return refuse(ctx, 'missing', `No event with id \`${id}\`. Run \`/event action:list\` to see the open ones.`);
+      if (!event) return refuse(ctx, 'missing', `no event with id \`${id}\`, check \`/event action:list\``);
       await loadEvent(ctx, event);
       return 'ok';
     } },
@@ -248,11 +247,11 @@ module.exports = ({ need, fail, arg, num }) => {
       const id = need(a, 1, '$eventEnd[id]')[0].trim();
       const { events } = rt();
       const event = await eventFor(ctx, id);
-      if (!event) return refuse(ctx, 'missing', `No event with id \`${id}\`.`);
-      if (!mayManageEvent(ctx, event)) return refuse(ctx, 'denied', 'Only the host or a staff member can end this event.');
-      if (event.status === 'scheduled') return refuse(ctx, 'not_started', 'That event has not started yet. Use `/event action:cancel` to call it off.');
+      if (!event) return refuse(ctx, 'missing', `no event with id \`${id}\``);
+      if (!mayManageEvent(ctx, event)) return refuse(ctx, 'denied', 'only the host or staff can end it');
+      if (event.status === 'scheduled') return refuse(ctx, 'not_started', 'it hasnt started yet, use `/event action:cancel` to call it off');
       const ended = await events.finish(event.id);
-      if (!ended) return refuse(ctx, 'over', 'That event is already over.');
+      if (!ended) return refuse(ctx, 'over', 'its already over');
       await loadEvent(ctx, ended);
       return 'ok';
     } },
@@ -262,10 +261,10 @@ module.exports = ({ need, fail, arg, num }) => {
       const id = need(a, 1, '$eventCancel[id]')[0].trim();
       const { events } = rt();
       const event = await eventFor(ctx, id);
-      if (!event) return refuse(ctx, 'missing', `No event with id \`${id}\`.`);
-      if (!mayManageEvent(ctx, event)) return refuse(ctx, 'denied', 'Only the host or a staff member can cancel this event.');
+      if (!event) return refuse(ctx, 'missing', `no event with id \`${id}\``);
+      if (!mayManageEvent(ctx, event)) return refuse(ctx, 'denied', 'only the host or staff can cancel it');
       const cancelled = await events.cancel(event.id);
-      if (!cancelled) return refuse(ctx, 'over', 'That event is already over.');
+      if (!cancelled) return refuse(ctx, 'over', 'its already over');
       await loadEvent(ctx, cancelled);
       return 'ok';
     } },
@@ -344,9 +343,9 @@ module.exports = ({ need, fail, arg, num }) => {
   }
 
   const BLOCKED = {
-    off: () => 'Promotions are off: the bot has no Roblox group configured to read ranks from.',
-    not_linked: (self) => (self ? 'Link your Roblox account with `/connect` first.' : 'Didnt link acc with `/connect`, Cant track stuff.'),
-    not_in_group: (self) => (self ? 'You are not in group.' : 'Not in roblox group.'),
+    off: () => 'promotions r off, no roblox group set up',
+    not_linked: (self) => (self ? 'link ur roblox with `/connect` first' : 'didnt link acc with `/connect`, cant track stuff'),
+    not_in_group: (self) => (self ? 'ur not in the group' : 'not in the roblox group'),
   };
 
   const promoFns = {
@@ -369,7 +368,7 @@ module.exports = ({ need, fail, arg, num }) => {
       const verdict = await ranks.requestPromotion(ctx.author.id);
       const outcome = verdict.outcome;
       if (BLOCKED[outcome]) return refuse(ctx, outcome, BLOCKED[outcome](true));
-      if (outcome === 'failed') return refuse(ctx, 'failed', `Roblox refused that. ${verdict.reason}`);
+      if (outcome === 'failed') return refuse(ctx, 'failed', `roblox said no: ${verdict.reason}`);
       ctx.json = { code: outcome, rankName: verdict.rank?.name ?? '' };
       if (verdict.progress) Object.assign(ctx.json, await promotionData(ctx, verdict.progress), { rankName: verdict.rank?.name ?? '' });
       if (outcome === 'needs_approval') ctx.json.posted = (await postPromotionRequest(ctx, verdict.rank, verdict.progress)) ? 'yes' : 'no';
@@ -385,7 +384,7 @@ module.exports = ({ need, fail, arg, num }) => {
       const all = ranks.list();
       const list = [...all].sort((x, y) => y.rank - x.rank).filter((rank) => rank.rank > 0 && rank.rank < 255).map((rank) => {
         const view = mod('views').rankView(rank);
-        return { ...view, number: String(rank.rank).padStart(3, ' '), memberText: rank.memberCount === null ? '' : ` · ${rank.memberCount} member(s)` };
+        return { ...view, number: String(rank.rank).padStart(3, ' '), memberText: rank.memberCount === null ? '' : ` · ${rank.memberCount} ppl` };
       });
       ctx.json = { stored: all.length, count: list.length, ranks: list, group: isGroupConfigured() ? 'yes' : 'no', sheets: isSheetsConfigured() ? 'yes' : 'no' };
       return '';
@@ -397,7 +396,7 @@ module.exports = ({ need, fail, arg, num }) => {
       const { isGroupConfigured } = mod('roblox/group');
       if (!sheets) {
         // Without a sheet the group is still worth re-reading, so the ladder stays current.
-        if (!isGroupConfigured()) return refuse(ctx, 'nogroup', 'There is no Roblox group configured, so there are no ranks to read.');
+        if (!isGroupConfigured()) return refuse(ctx, 'nogroup', 'no roblox group set up so no ranks');
         const ladder = await ranks.syncFromGroup();
         ctx.json = { code: 'ok', sheets: 'no', ranks: ladder.length, problems: [], problemCount: 0 };
         return 'ok';
@@ -416,19 +415,19 @@ module.exports = ({ need, fail, arg, num }) => {
       const { config } = mod('config/index');
       const approving = choice.trim().toLowerCase().startsWith('approv');
       if (!allowed(ctx, 'promotion')) {
-        return refuse(ctx, 'denied', config.ranks.staffRoleId ? `Only <@&${config.ranks.staffRoleId}> can decide promotions.` : 'You do not have permission to do that.');
+        return refuse(ctx, 'denied', config.ranks.staffRoleId ? `only <@&${config.ranks.staffRoleId}> can decide promos` : 'u cant do that');
       }
       const saved = ctx.messageId ? await store.getSetting(REQUEST_KEY(ctx.messageId)) : null;
       const legacy = saved ? null : await legacyCard(ctx);
-      if (saved?.decided === 'yes' || legacy?.decided) return refuse(ctx, 'decided', 'That request has already been decided.');
+      if (saved?.decided === 'yes' || legacy?.decided) return refuse(ctx, 'decided', 'someone already handled this one');
 
       const rank = ranks.byRoleId(Number(roleId));
-      if (approving && !rank) return refuse(ctx, 'gone', 'That rank is no longer in the group. Run `/promote action:sync`.');
+      if (approving && !rank) return refuse(ctx, 'gone', 'that rank isnt in the group anymore, run `/promote action:sync`');
       let note = '';
       if (approving && rank) {
         const applied = await ranks.apply(stripId(discordId), rank);
-        if (!applied.ok) return refuse(ctx, 'failed', `Roblox refused that. ${applied.reason}`);
-        note = `Set to ${rank.name} in the Roblox group.`;
+        if (!applied.ok) return refuse(ctx, 'failed', `roblox said no: ${applied.reason}`);
+        note = `ranked ${rank.name} in the group`;
       }
 
       const decision = { decided: 'yes', approved: approving ? 'yes' : 'no', decidedBy: ctx.author.id, note };
@@ -436,7 +435,7 @@ module.exports = ({ need, fail, arg, num }) => {
         await store.setSetting(REQUEST_KEY(ctx.messageId), { ...saved, ...decision });
         await mod('ui').edit(ctx.channel.id, ctx.messageId, 'promotion request', { ...saved, ...decision }, { about: stripId(discordId) });
       } else if (legacy) {
-        await legacy.mark(approving ? 'Approved' : 'Denied', [`By <@${ctx.author.id}>`, note].filter(Boolean).join('\n'));
+        await legacy.mark(approving ? 'Approved' : 'Denied', [`by <@${ctx.author.id}>`, note].filter(Boolean).join('\n'));
       }
       ctx.json = { code: 'ok', approved: approving ? 'yes' : 'no', rankName: rank?.name ?? '', discordId: stripId(discordId) };
       return 'ok';
@@ -491,7 +490,7 @@ module.exports = ({ need, fail, arg, num }) => {
       const { client } = rt();
       const { findSquad, SQUADS } = mod('squads/types');
       const squad = findSquad(query);
-      if (!squad) return refuse(ctx, 'unknown', `There is no squad called that. The squads are: ${SQUADS.map((x) => x.label).join(', ')}.`);
+      if (!squad) return refuse(ctx, 'unknown', `no squad like that, theres ${SQUADS.map((x) => x.label).join(', ')}`);
       const result = await mod('discord/squadRoles').applySquad(client, ctx.guild?.id ?? null, stripId(who), squad);
       if (!result.ok) return refuse(ctx, 'failed', result.reason);
       ctx.json = { code: 'ok', discordId: stripId(who), squad: squadView(squad) };
@@ -516,15 +515,15 @@ module.exports = ({ need, fail, arg, num }) => {
       const { resolveGuild } = mod('discord/roles');
       const { SQUADS } = mod('squads/types');
       const guild = await resolveGuild(client, ctx.guild?.id ?? null);
-      if (!guild) return refuse(ctx, 'noserver', 'I could not work out which server to count in. Set `DISCORD_GUILD_ID`.');
+      if (!guild) return refuse(ctx, 'noserver', 'cant tell which server, set `DISCORD_GUILD_ID`');
       // Reading the whole member list needs the Server Members intent, and without it
       // the fetch never answers, so check first.
       const { GatewayIntentBits } = require('discord.js');
       if (!client.options?.intents?.has?.(GatewayIntentBits.GuildMembers)) {
-        return refuse(ctx, 'nointent', 'Counting squads needs the Server Members Intent. Turn it on for this bot at <https://discord.com/developers/applications> under Bot > Privileged Gateway Intents.');
+        return refuse(ctx, 'nointent', 'needs the Server Members Intent, turn it on at <https://discord.com/developers/applications> under Bot');
       }
       const members = await guild.members.fetch({ time: 20_000 }).catch(() => null);
-      if (!members) return refuse(ctx, 'timeout', 'Discord did not send the member list in time. Try again in a moment.');
+      if (!members) return refuse(ctx, 'timeout', 'discord took too long, try again in a sec');
       ctx.json = {
         code: 'ok',
         squads: SQUADS.map((squad) => ({ ...squadView(squad), count: members.filter((member) => member.roles.cache.has(squad.roleId)).size })),
@@ -557,7 +556,7 @@ module.exports = ({ need, fail, arg, num }) => {
   async function applyRank(ctx, found, role, current) {
     const group = mod('roblox/group');
     await group.setRank(found.user.id, role.id);
-    await logAction(ctx, found, 'Ranked', current ? `${current.name} to ${role.name}` : `Set to ${role.name}`);
+    await logAction(ctx, found, 'ranked', current ? `${current.name} to ${role.name}` : `set to ${role.name}`);
     ctx.json = { code: 'ok', ...targetView(found), role: roleView(role), was: roleView(current) };
     return 'ok';
   }
@@ -594,10 +593,10 @@ module.exports = ({ need, fail, arg, num }) => {
         const group = mod('roblox/group');
         const found = await groupTarget(player);
         const request = await group.getJoinRequest(found.user.id);
-        if (!request) return refuse(ctx, 'norequest', `${found.user.name} has no request waiting. They may already be in the group.`);
+        if (!request) return refuse(ctx, 'norequest', `${found.user.name} got no join request, prob already in`);
         if (accepting) await group.acceptJoinRequest(found.user.id);
         else await group.declineJoinRequest(found.user.id);
-        await logAction(ctx, found, accepting ? 'Accepted into the group' : 'Declined');
+        await logAction(ctx, found, accepting ? 'accepted' : 'declined');
         ctx.json = { code: 'ok', ...targetView(found) };
         return 'ok';
       });
@@ -613,13 +612,13 @@ module.exports = ({ need, fail, arg, num }) => {
         const role = group.matchRole(roles, wanted);
         if (!role) {
           const names = group.assignableRoles(roles).map((entry) => entry.name);
-          return refuse(ctx, 'nomatch', `No rank matches \`${wanted}\`. The group has: ${names.join(', ') || 'no ranks I can set'}.`);
+          return refuse(ctx, 'nomatch', `no rank like \`${wanted}\`, theres ${names.join(', ') || 'none that can be set'}`);
         }
         if (!group.assignableRoles(roles).some((entry) => entry.id === role.id)) {
-          return refuse(ctx, 'locked', `${role.name} is not a rank I can hand out. Guest and the owner rank are off limits.`);
+          return refuse(ctx, 'locked', `cant give ${role.name}, guest n owner r off limits`);
         }
         const current = await group.getMembership(found.user.id);
-        if (!current) return refuse(ctx, 'notmember', `${found.user.name} is not in the group, so there is nothing to rank.`);
+        if (!current) return refuse(ctx, 'notmember', `${found.user.name} isnt in the group`);
         if (current.id === role.id) {
           ctx.json = { code: 'already', ...targetView(found), role: roleView(role), error: `${mod('discord/groupActions').describeUser(found)} is already ${roleView(role).label}.` };
           return 'already';
@@ -636,11 +635,11 @@ module.exports = ({ need, fail, arg, num }) => {
         const group = mod('roblox/group');
         const found = await groupTarget(player);
         const current = await group.getMembership(found.user.id);
-        if (!current) return refuse(ctx, 'notmember', `${found.user.name} is not in the group, so there is nothing to change.`);
+        if (!current) return refuse(ctx, 'notmember', `${found.user.name} isnt in the group`);
         const next = group.adjacentRole(await group.listRoles(), current.rank, direction);
         if (!next) {
           const { describeUser, describeRole } = mod('discord/groupActions');
-          return refuse(ctx, 'edge', `${describeUser(found)} is already at the ${direction === 1 ? 'highest' : 'lowest'} rank I can set (${describeRole(current)}).`);
+          return refuse(ctx, 'edge', `${describeUser(found)} is already at the ${direction === 1 ? 'top' : 'bottom'} (${describeRole(current)})`);
         }
         return applyRank(ctx, found, next, current);
       });
@@ -653,9 +652,9 @@ module.exports = ({ need, fail, arg, num }) => {
         const group = mod('roblox/group');
         const found = await groupTarget(player);
         const current = await group.getMembership(found.user.id);
-        if (!current) return refuse(ctx, 'notmember', `${found.user.name} is not in the group.`);
+        if (!current) return refuse(ctx, 'notmember', `${found.user.name} isnt in the group`);
         await group.exile(found.user.id);
-        await logAction(ctx, found, 'Exiled', `Was ${current.name}`);
+        await logAction(ctx, found, 'exiled', `was ${current.name}`);
         ctx.json = { code: 'ok', ...targetView(found), was: roleView(current) };
         return 'ok';
       });
@@ -700,7 +699,7 @@ module.exports = ({ need, fail, arg, num }) => {
   const PAGE_SIZE = 10;
 
   function applicationsOff(ctx) {
-    return refuse(ctx, 'off', 'Applications are off. Set `APPLICATION_SHEET_ID` and `APPLICATION_CHANNEL_ID` to the form’s linked spreadsheet and the channel to post in, then restart.');
+    return refuse(ctx, 'off', 'apps are off, set `APPLICATION_SHEET_ID` n `APPLICATION_CHANNEL_ID` then restart');
   }
 
   /** Only the answers are searched; the questions are the same on every row. */
@@ -738,7 +737,7 @@ module.exports = ({ need, fail, arg, num }) => {
         row: application.rowIndex,
         line: applicationLine(application),
         posted: application.rowIndex > posted ? 'no' : 'yes',
-        unseen: application.rowIndex > posted ? ' · *never posted*' : '',
+        unseen: application.rowIndex > posted ? ' · *not posted*' : '',
       })),
     };
   }
@@ -746,21 +745,21 @@ module.exports = ({ need, fail, arg, num }) => {
   // One reputation provider's answer in a line. A provider with no key is reported as
   // not having run, never folded into the clean result.
   function describeProvider(provider) {
-    if (provider.configured === false) return `⚪ ${provider.provider}: not configured, so it did not run`;
+    if (provider.configured === false) return `⚪ ${provider.provider}: not set up, didnt run`;
     if (provider.skipped) return `⚪ ${provider.provider}: skipped${provider.note ? ` (${provider.note})` : ''}`;
-    if (provider.ok === false) return `⚠️ ${provider.provider}: lookup failed (${provider.error ?? 'unknown'})`;
+    if (provider.ok === false) return `⚠️ ${provider.provider}: lookup failed (${provider.error ?? 'idk why'})`;
     const head = provider.flagged ? `🔴 ${provider.provider}: flagged`
-      : provider.appealed ? `🟢 ${provider.provider}: previously flagged, since appealed`
+      : provider.appealed ? `🟢 ${provider.provider}: was flagged but appealed`
         : `🟢 ${provider.provider}: clean`;
     const lines = (provider.lines ?? []).map((line) => `  ${line}`);
-    return [head, ...lines].join('\n') + (provider.partial ? '\n  *Part of this lookup failed.*' : '');
+    return [head, ...lines].join('\n') + (provider.partial ? '\n  *part of it failed*' : '');
   }
 
   function checkView(check, discordId) {
     const section = (title, matches) => {
       if (!matches?.length) return null;
       const shown = matches.slice(0, 8).map((m) => `• ${m.name ?? m.assetId ?? 'unnamed item'}${typeof m.score === 'number' ? ` (${m.score})` : ''}${m.reason ? `: ${m.reason}` : ''}`);
-      if (matches.length > 8) shown.push(`and ${matches.length - 8} more.`);
+      if (matches.length > 8) shown.push(`+${matches.length - 8} more`);
       return { title: `${title} (${matches.length})`, lines: shown.join('\n') };
     };
     const flagged = check.flagged === true;
@@ -773,10 +772,10 @@ module.exports = ({ need, fail, arg, num }) => {
       incomplete: check.incomplete === true ? 'yes' : 'no',
       private: check.private ? 'yes' : 'no',
       sections: [
-        section('Flagged accessories', check.accessoryMatches),
-        section('Flagged clothing', check.clothingMatches),
-        section('Flagged badges', check.badgeMatches),
-        section('Caught by name', check.autoMatches),
+        section('flagged accessories', check.accessoryMatches),
+        section('flagged clothing', check.clothingMatches),
+        section('flagged badges', check.badgeMatches),
+        section('sus names', check.autoMatches),
       ].filter(Boolean),
       reputation: providers.map(describeProvider).join('\n'),
       // showing this on a flagged user is a condition of Server Sweep's terms
@@ -787,9 +786,9 @@ module.exports = ({ need, fail, arg, num }) => {
   }
 
   const describeDm = (outcome) => ({
-    sent: 'They have been told by DM.',
-    blocked: 'I could not DM them, their DMs are probably closed, so tell them yourself.',
-  }[outcome] ?? 'No Discord account was on the application, so nobody was told.');
+    sent: 'they got a DM',
+    blocked: 'couldnt DM them, prob closed DMs, tell them urself',
+  }[outcome] ?? 'no discord on the app so nobody got told');
 
   const appFns = {
     // yes when the form's sheet and the applications channel are set
@@ -814,12 +813,12 @@ module.exports = ({ need, fail, arg, num }) => {
       if (!applications) return applicationsOff(ctx);
       const from = Math.floor(num(need(a, 1, '$appPost[number;to?]')[0], 'number'));
       const to = arg(a, 1) ? Math.floor(num(a[1], 'to')) : from;
-      if (to < from) return refuse(ctx, 'order', '`to` has to be the same as `number` or higher.');
-      if (to - from + 1 > 20) return refuse(ctx, 'toomany', `That is ${to - from + 1} applications. Post at most 20 at a time.`);
+      if (to < from) return refuse(ctx, 'order', '`to` cant be lower than `number`');
+      if (to - from + 1 > 20) return refuse(ctx, 'toomany', `thats ${to - from + 1}, max 20 at once`);
       const all = await applications.fetchAll();
       const wanted = all.filter((application) => application.rowIndex >= from && application.rowIndex <= to);
       if (wanted.length === 0) {
-        return refuse(ctx, all.length === 0 ? 'empty' : 'none', all.length === 0 ? 'There are no applications in the sheet yet.' : `No application in that range. They run from #1 to #${all.length}.`);
+        return refuse(ctx, all.length === 0 ? 'empty' : 'none', all.length === 0 ? 'no apps in the sheet yet' : `nothing in that range, theres #1 to #${all.length}`);
       }
       let sent = 0;
       for (const application of wanted) if (await applications.postOne(client, application)) sent += 1;
@@ -839,7 +838,7 @@ module.exports = ({ need, fail, arg, num }) => {
       const { applications } = rt();
       const saved = applications && ctx.messageId ? await applications.card(ctx.messageId) : null;
       const legacy = saved ? null : await legacyCard(ctx, ['Accepted', 'Denied']);
-      if (saved?.decided === 'yes' || legacy?.decided) return refuse(ctx, 'decided', 'That application has already been decided.');
+      if (saved?.decided === 'yes' || legacy?.decided) return refuse(ctx, 'decided', 'someone already handled this app');
       ctx.json = { code: 'ok', ...(saved ?? {}) };
       return 'ok';
     } },
@@ -851,14 +850,14 @@ module.exports = ({ need, fail, arg, num }) => {
       const username = arg(a, 0).trim();
       const discordId = arg(a, 1).trim();
       const applicant = discordId && discordId !== '-' ? discordId : null;
-      if (!username || username === '-') return refuse(ctx, 'nouser', 'No Roblox username could be read from this application, so there is nobody to check.');
+      if (!username || username === '-') return refuse(ctx, 'nouser', 'no roblox username on this app, nothing to check');
       const outcome = await mod('rovuew/client').fullCheck(username, applicant);
       if (outcome.status === 'ok') { ctx.json = { code: 'ok', ...checkView(outcome.result, applicant) }; return 'ok'; }
-      if (outcome.status === 'not_found') return refuse(ctx, 'not_found', `Roblox has no account called \`${username}\`.`);
-      if (outcome.status === 'rate_limited') return refuse(ctx, 'rate_limited', `RoVuew is cooling down. ${outcome.message}`);
-      if (outcome.status === 'off') return refuse(ctx, 'off', 'Background checks are off.');
+      if (outcome.status === 'not_found') return refuse(ctx, 'not_found', `no roblox acc called \`${username}\``);
+      if (outcome.status === 'rate_limited') return refuse(ctx, 'rate_limited', `rovuew on cooldown, ${outcome.message}`);
+      if (outcome.status === 'off') return refuse(ctx, 'off', 'bg checks r off');
       mod('util/logger').createLogger('applications').warn(`Background check for ${username} failed: ${outcome.reason}`);
-      return refuse(ctx, 'failed', `The check did not run. ${outcome.reason}`);
+      return refuse(ctx, 'failed', `check didnt run: ${outcome.reason}`);
     } },
 
     // $appDecide[accept|deny;row;Roblox username;Discord ID;reason?] → from the reason
@@ -874,7 +873,7 @@ module.exports = ({ need, fail, arg, num }) => {
 
       const saved = applications && ctx.messageId ? await applications.card(ctx.messageId) : null;
       const legacy = saved ? null : await legacyCard(ctx, ['Accepted', 'Denied']);
-      if (saved?.decided === 'yes' || legacy?.decided) return refuse(ctx, 'decided', 'That application has already been decided.');
+      if (saved?.decided === 'yes' || legacy?.decided) return refuse(ctx, 'decided', 'someone already handled this app');
       if (!ctx.messageId) log.warn('A decision form came back with no message to update');
 
       const note = await applyGroupDecision(ctx, store, accepting, username.trim() || '-');
@@ -905,23 +904,23 @@ module.exports = ({ need, fail, arg, num }) => {
    */
   async function applyGroupDecision(ctx, store, accepting, username) {
     if (username === '-') {
-      return 'No Roblox username could be read from the application, so the group was not changed. Use `/group action:accept` once you know it.';
+      return 'no roblox username on the app so the group wasnt touched, use `/group action:accept` when u know it';
     }
     const group = mod('roblox/group');
-    if (!group.isGroupConfigured()) return 'Group management is off, so only the card was updated.';
+    if (!group.isGroupConfigured()) return 'group stuff is off, only the card got updated';
     const { targetFromUsername, logGroupAction } = mod('discord/groupActions');
     try {
       const found = await targetFromUsername(store, username);
       const request = await group.getJoinRequest(found.user.id);
-      if (!request) return `${found.user.name} has no join request waiting, so the group was left alone.`;
+      if (!request) return `${found.user.name} got no join request so the group wasnt touched`;
       if (accepting) await group.acceptJoinRequest(found.user.id);
       else await group.declineJoinRequest(found.user.id);
-      await logGroupAction(rt().client, { action: accepting ? 'Accepted into the group' : 'Declined', actorId: ctx.author.id, target: found, detail: 'From an application card' });
-      return accepting ? `${found.user.name} was accepted into the group.` : `${found.user.name}'s join request was declined.`;
+      await logGroupAction(rt().client, { action: accepting ? 'accepted' : 'declined', actorId: ctx.author.id, target: found, detail: 'from an app card' });
+      return accepting ? `${found.user.name} got accepted into the group` : `${found.user.name} join request declined`;
     } catch (error) {
       const why = error instanceof group.GroupError ? error.message : group.robloxErrorMessage(error);
       mod('util/logger').createLogger('discord:applications').warn(`Group action from an application card failed: ${why}`);
-      return `The group was not changed: ${why}`;
+      return `group didnt change: ${why}`;
     }
   }
 
@@ -944,8 +943,8 @@ module.exports = ({ need, fail, arg, num }) => {
   const adminDenied = (ctx) => {
     const { config } = mod('config/index');
     return refuse(ctx, 'denied', config.discord.adminRoleId
-      ? `Only <@&${config.discord.adminRoleId}> can use the admin panel.`
-      : 'This needs the Administrator permission, or an `ADMIN_ROLE_ID` role.');
+      ? `only <@&${config.discord.adminRoleId}> can use this`
+      : 'need admin perms or the `ADMIN_ROLE_ID` role');
   };
 
   async function endShiftFor(ctx, discordId) {
@@ -953,9 +952,9 @@ module.exports = ({ need, fail, arg, num }) => {
     const { summarise } = mod('shifts/manager');
     const { formatDuration } = mod('util/time');
     const shift = await manager.endIfOpen(discordId, 'admin');
-    if (!shift) return refuse(ctx, 'notonshift', `<@${discordId}> was no longer on shift.`);
+    if (!shift) return refuse(ctx, 'notonshift', `<@${discordId}> wasnt on shift anymore`);
     const banked = formatDuration(summarise([shift]).workedMs);
-    await logAdmin(ctx, `Ended <@${discordId}>'s shift, ${banked} banked.`);
+    await logAdmin(ctx, `ended <@${discordId}> shift, ${banked} banked`);
     ctx.json = { code: 'ok', discordId, typeLabel: mod('shifts/types').shiftTypeLabel(shift.type), banked };
     return 'ok';
   }
@@ -963,13 +962,13 @@ module.exports = ({ need, fail, arg, num }) => {
   async function endEventFor(ctx, eventId) {
     const { events } = rt();
     const event = await events.getEvent(eventId);
-    if (!event) return refuse(ctx, 'missing', 'There is no event with that id.');
+    if (!event) return refuse(ctx, 'missing', 'no event with that id');
     // Finishing something that never started would bank nothing and look like a bug.
-    if (event.status === 'scheduled') return refuse(ctx, 'not_started', `${event.name} has not started yet. Cancel it with \`/event action:cancel\` instead.`);
+    if (event.status === 'scheduled') return refuse(ctx, 'not_started', `${event.name} hasnt started, cancel it with \`/event action:cancel\``);
     const result = await events.finish(eventId);
-    if (!result) return refuse(ctx, 'over', `${event.name} is already over.`);
+    if (!result) return refuse(ctx, 'over', `${event.name} is already over`);
     const banked = (await events.listSignups(eventId)).filter((signup) => signup.shiftId !== null).length;
-    await logAdmin(ctx, `Ended the event ${result.name}, ${banked} logged.`);
+    await logAdmin(ctx, `ended ${result.name}, ${banked} logged`);
     ctx.json = { code: 'ok', name: result.name, banked };
     return 'ok';
   }
@@ -1033,16 +1032,16 @@ module.exports = ({ need, fail, arg, num }) => {
       const { formatDuration } = mod('util/time');
       const target = stripId(who);
       const sign = way.trim().toLowerCase().startsWith('rem') ? -1 : 1;
-      if (!isShiftType(type.trim())) return refuse(ctx, 'unknown_type', 'That is not a shift type I know about.');
+      if (!isShiftType(type.trim())) return refuse(ctx, 'unknown_type', 'thats not a shift type');
       const minutes = parseDuration(raw);
-      if (minutes <= 0) return refuse(ctx, 'bad_time', `\`${raw}\` is not a length of time. Use \`90m\`, \`2h\` or \`1h30m\`.`);
+      if (minutes <= 0) return refuse(ctx, 'bad_time', `\`${raw}\` isnt a time, use like \`90m\` or \`2h\``);
       // Long enough to fix a mistake, short enough that a typo cannot invent a year.
-      if (minutes > 100 * 60) return refuse(ctx, 'too_much', `That is ${Math.round(minutes / 60)} hours. Adjust at most 100 at a time.`);
+      if (minutes > 100 * 60) return refuse(ctx, 'too_much', `thats ${Math.round(minutes / 60)}h, max 100 at once`);
       const deltaMs = sign * minutes * 60_000;
       // Taking away more than somebody has would leave a negative total.
       const banked = summarise(await manager.listShifts(target, { type: type.trim() })).workedMs;
       if (sign === -1 && banked + deltaMs < 0) {
-        return refuse(ctx, 'not_enough', `<@${target}> only has ${formatDuration(banked)} of ${shiftTypeLabel(type.trim())}, so ${formatDuration(-deltaMs)} cannot come off.`);
+        return refuse(ctx, 'not_enough', `<@${target}> only got ${formatDuration(banked)} of ${shiftTypeLabel(type.trim())}, cant take ${formatDuration(-deltaMs)}`);
       }
       await manager.adjust({ discordId: target, guildId: ctx.guild?.id ?? null, type: type.trim(), deltaMs, actorId: ctx.author.id });
       const after = formatDuration(banked + deltaMs);
@@ -1087,7 +1086,7 @@ module.exports = ({ need, fail, arg, num }) => {
       const { academy, store, manager } = rt();
       const id = stripId(arg(a, 0, ctx.author.id));
       const entry = await academy.get(id);
-      if (!entry) return refuse(ctx, 'none', `<@${id}> is not in the academy.`);
+      if (!entry) return refuse(ctx, 'none', `<@${id}> isnt in the academy`);
       const { summarise } = mod('shifts/manager');
       const link = await store.getLinkByDiscordId(id);
       ctx.json = {
@@ -1105,10 +1104,10 @@ module.exports = ({ need, fail, arg, num }) => {
       const { academy } = rt();
       const { findPhase, PHASES } = mod('academy');
       const phase = findPhase(phaseText);
-      if (!phase) return refuse(ctx, 'unknown_phase', `There is no phase called ${phaseText}. The phases are ${PHASES.map((p) => p.label).join(', ')}.`);
+      if (!phase) return refuse(ctx, 'unknown_phase', `no phase called ${phaseText}, theres ${PHASES.map((p) => p.label).join(', ')}`);
       const id = stripId(who);
       const current = await academy.get(id);
-      if (current?.phase === phase.key) return refuse(ctx, 'same', `<@${id}> is already on ${phase.label}.`);
+      if (current?.phase === phase.key) return refuse(ctx, 'same', `<@${id}> is already on ${phase.label}`);
       const { before, after, roleNote } = await academy.setPhase(id, phase.key, { by: ctx.author.id, guildId: ctx.guild?.id ?? null });
       const was = before ? PHASES.find((p) => p.key === before.phase)?.label ?? '' : '';
       ctx.json = { code: 'ok', ...memberView(id, after), was, added: before ? 'no' : 'yes', roleNote: roleNote ?? '' };
@@ -1120,7 +1119,7 @@ module.exports = ({ need, fail, arg, num }) => {
       const id = stripId(need(a, 1, '$academyRemove[user ID]')[0]);
       const { academy } = rt();
       const { removed, roleNote } = await academy.remove(id, { guildId: ctx.guild?.id ?? null });
-      if (!removed) return refuse(ctx, 'none', `<@${id}> is not in the academy.`);
+      if (!removed) return refuse(ctx, 'none', `<@${id}> isnt in the academy`);
       ctx.json = { code: 'ok', discordId: id, was: memberView(id, removed).phaseLabel, roleNote: roleNote ?? '' };
       return 'ok';
     } },
@@ -1134,7 +1133,7 @@ module.exports = ({ need, fail, arg, num }) => {
       const entries = Object.entries(roster).sort((x, y) => x[1].since - y[1].since);
       const phases = PHASES.filter((p) => !only || p.key === only.key).map((p) => {
         const people = entries.filter(([, e]) => e.phase === p.key).map(([id, e]) => memberView(id, e));
-        return { key: p.key, label: p.label, number: p.number, count: people.length, list: people.map((m) => `${m.mention} · ${m.since}`).join('\n') || 'Nobody' };
+        return { key: p.key, label: p.label, number: p.number, count: people.length, list: people.map((m) => `${m.mention} · ${m.since}`).join('\n') || 'nobody' };
       });
       ctx.json = { count: phases.reduce((n, p) => n + p.count, 0), phases };
       return '';
@@ -1144,7 +1143,7 @@ module.exports = ({ need, fail, arg, num }) => {
     academySync: { async fn(ctx) {
       const { academy } = rt();
       const result = await academy.syncSheet();
-      if (result.off) return refuse(ctx, 'off', 'Google Sheets is not set up, so there is nothing to sync with.');
+      if (result.off) return refuse(ctx, 'off', 'google sheets isnt set up, nothing to sync');
       ctx.json = { code: 'ok', ...result };
       return 'ok';
     } },
@@ -1214,7 +1213,7 @@ module.exports = ({ need, fail, arg, num }) => {
       const source = arg(a, 1, 'panel').toLowerCase() === 'prompt' ? 'prompt' : 'panel';
       const { store, manager } = rt();
       const { isShiftType } = mod('shifts/types');
-      if (!isShiftType(type.trim())) return refuse(ctx, 'unknown_type', 'Pick a shift type from the menu first.');
+      if (!isShiftType(type.trim())) return refuse(ctx, 'unknown_type', 'pick a shift type first');
       const check = await requireInGame(ctx, store, type.trim());
       if (!check.game) return refuse(ctx, check.code, check.error, { playing: check.playing ?? '' });
       const link = await store.getLinkByDiscordId(ctx.author.id);
@@ -1260,7 +1259,7 @@ module.exports = ({ need, fail, arg, num }) => {
       const id = stripId(arg(a, 0, ctx.author.id));
       const range = RANGES[arg(a, 1, 'all').toLowerCase()] ? arg(a, 1, 'all').toLowerCase() : 'all';
       if (id !== ctx.author.id && !allowed(ctx, 'staff')) {
-        return refuse(ctx, 'denied', 'You do not have permission to look up the tracked time of other members.');
+        return refuse(ctx, 'denied', 'u cant check other ppl time');
       }
       const { summarise } = mod('shifts/manager');
       const { daysAgo, startOfUtcDay, formatDuration, formatHours, discordTimestamp } = mod('util/time');
@@ -1291,20 +1290,20 @@ module.exports = ({ need, fail, arg, num }) => {
         range,
         rangeLabel: RANGES[range],
         linked: link ? 'yes' : 'no',
-        roblox: link ? robloxLine(link.robloxId, link.robloxUsername) : 'Not linked',
+        roblox: link ? robloxLine(link.robloxId, link.robloxUsername) : 'not linked',
         robloxUsername: link?.robloxUsername ?? '',
         worked: formatDuration(totals.workedMs),
         workedHours: formatHours(totals.workedMs),
         shiftCount: totals.shiftCount,
-        average: totals.shiftCount > 0 ? formatDuration(totals.workedMs / totals.shiftCount) : 'None',
-        longest: totals.longestMs > 0 ? formatDuration(totals.longestMs) : 'None',
+        average: totals.shiftCount > 0 ? formatDuration(totals.workedMs / totals.shiftCount) : 'none',
+        longest: totals.longestMs > 0 ? formatDuration(totals.longestMs) : 'none',
         onBreak: formatDuration(totals.breakMs),
-        lastShift: totals.lastEndedAt ? discordTimestamp(totals.lastEndedAt, 'R') : 'None',
-        squad: squad ? `<@&${squad.roleId}>` : 'None',
+        lastShift: totals.lastEndedAt ? discordTimestamp(totals.lastEndedAt, 'R') : 'none',
+        squad: squad ? `<@&${squad.roleId}>` : 'none',
         squadName: squad?.label ?? '',
         hosted: hosted.hosted,
         hostedLive: hosted.live,
-        hostedText: hosted.hosted === 0 && hosted.live === 0 ? 'None' : `${hosted.hosted}${hosted.live > 0 ? ` (${hosted.live} on now)` : ''}`,
+        hostedText: hosted.hosted === 0 && hosted.live === 0 ? 'none' : `${hosted.hosted}${hosted.live > 0 ? ` (${hosted.live} going rn)` : ''}`,
         byType,
         byTypeCount: byType.length,
         open: shiftView(open, now),
@@ -1342,7 +1341,7 @@ module.exports = ({ need, fail, arg, num }) => {
       const { store } = rt();
       const { config, isOAuthConfigured } = mod('config/index');
       if (!isOAuthConfigured()) {
-        return refuse(ctx, 'off', 'Roblox linking is not configured on this bot yet. An admin needs to set `ROBLOX_CLIENT_ID`, `ROBLOX_CLIENT_SECRET` and `PUBLIC_BASE_URL`.');
+        return refuse(ctx, 'off', 'roblox oauth isnt set up, use /connect instead');
       }
       const { buildAuthorizationRequest } = mod('roblox/oauth');
       const existing = await store.getLinkByDiscordId(ctx.author.id);
@@ -1377,8 +1376,8 @@ module.exports = ({ need, fail, arg, num }) => {
       rt();
       const result = await mod('link').start(ctx.author.id, ctx.guild?.id ?? null, arg(a, 0).trim());
       ctx.json = result;
-      if (result.status === 'not_found') ctx.json.error = `There is no Roblox account called ${result.username}. Check the spelling.`;
-      if (result.status === 'ask') ctx.json.error = 'Bloxlink does not know your Roblox account. Run /connect again with your Roblox username.';
+      if (result.status === 'not_found') ctx.json.error = `no roblox acc called ${result.username}, check the spelling`;
+      if (result.status === 'ask') ctx.json.error = 'bloxlink doesnt know ur roblox, do /connect again with ur username';
       return result.status;
     } },
 
@@ -1388,11 +1387,11 @@ module.exports = ({ need, fail, arg, num }) => {
       const { store, client, manager } = rt();
       const link = mod('link');
       const entry = link.current(ctx.author.id);
-      if (!entry) return refuse(ctx, 'expired', 'That ran out. Run /connect again.');
+      if (!entry) return refuse(ctx, 'expired', 'timed out, do /connect again');
       if (entry.via === 'code') {
         let found;
-        try { found = await link.codeIsInProfile(entry); } catch { return refuse(ctx, 'failed', 'Roblox did not answer. Try again in a moment.'); }
-        if (!found) return refuse(ctx, 'missing', `The code ${entry.code} is not in the About of ${entry.name} yet. Save it on Roblox, wait a few seconds, then press the button again.`, link.view(entry));
+        try { found = await link.codeIsInProfile(entry); } catch { return refuse(ctx, 'failed', 'roblox didnt answer, try again in a sec'); }
+        if (!found) return refuse(ctx, 'missing', `code ${entry.code} isnt in ${entry.name} About yet, save it on roblox, wait a bit n press again`, link.view(entry));
       }
       const now = Date.now();
       await store.upsertLink({
@@ -1416,7 +1415,7 @@ module.exports = ({ need, fail, arg, num }) => {
     disconnect: { async fn(ctx) {
       const { store, manager } = rt();
       const link = await store.getLinkByDiscordId(ctx.author.id);
-      if (!link) return refuse(ctx, 'none', 'You do not have a Roblox account linked.');
+      if (!link) return refuse(ctx, 'none', 'u got no roblox linked');
       // Close anything still running so nothing is left open that presence can no longer end.
       const closed = await manager.endIfOpen(ctx.author.id, 'manual');
       if (link.refreshToken) await mod('roblox/oauth').revokeToken(link.refreshToken);
