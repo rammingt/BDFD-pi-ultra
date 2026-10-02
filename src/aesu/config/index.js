@@ -181,6 +181,17 @@ const config = {
     /** Where promotion requests and approvals are posted. Falls back to the group log. */
     channelId: str('PROMOTION_CHANNEL_ID', str('GROUP_LOG_CHANNEL_ID')),
   },
+  academy: {
+    /** Role allowed to move people between phases. Falls back to the shift staff role. */
+    staffRoleId: str('ACADEMY_STAFF_ROLE_ID', str('SHIFT_STAFF_ROLE_ID')),
+    /** The role each phase carries. Moving phase swaps them. Leave one empty to skip it. */
+    roles: {
+      orientation: str('ACADEMY_ROLE_ORIENTATION'),
+      academy: str('ACADEMY_ROLE_ACADEMY'),
+      final_exam: str('ACADEMY_ROLE_FINAL_EXAM'),
+      waiting: str('ACADEMY_ROLE_WAITING'),
+    },
+  },
   squads: {
     /** Comma separated `Label=roleId`. The label is what people see and type. */
     list: str('SQUADS', DEFAULT_SQUADS),

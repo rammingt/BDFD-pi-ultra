@@ -7,7 +7,7 @@
 // Off unless AESU_ENABLED=yes, so a BDX without the tracker never touches its settings.
 const { Events } = require('discord.js');
 
-const runtime = { started: false, startedAt: 0, store: null, manager: null, events: null, ranks: null, sheets: null, applications: null, watcher: null, client: null, server: null };
+const runtime = { started: false, startedAt: 0, store: null, manager: null, events: null, ranks: null, sheets: null, applications: null, academy: null, watcher: null, client: null, server: null };
 
 function isEnabled() {
   return ['1', 'true', 'yes', 'on'].includes(String(process.env.AESU_ENABLED || '').trim().toLowerCase());
@@ -71,7 +71,8 @@ async function boot({ client, engine, log, describeError }) {
   await ranks.init();
   const sheets = createSheetsSync(ranks);
   const applications = createApplicationWatcher(store);
-  Object.assign(runtime, { started: true, startedAt, store, manager, events, ranks, sheets, applications, client });
+  const academy = new (require('./academy').Academy)(store, client);
+  Object.assign(runtime, { started: true, startedAt, store, manager, events, ranks, sheets, applications, academy, client });
 
   registerShiftLogging(manager);
   registerDutyRoles(client, manager);
@@ -99,6 +100,8 @@ async function boot({ client, engine, log, describeError }) {
   const syncSheets = async () => {
     if (sheets) await sheets.syncNow().catch((error) => log.error(`Sheet sync failed: ${describeError(error)}`));
     if (applications) await applications.poll(client).catch((error) => log.error(`Application check failed: ${describeError(error)}`));
+    // Picks up phases staff changed in the Academy tab, and writes the roster back.
+    await academy.syncSheet().catch((error) => log.error(`Academy sheet sync failed: ${describeError(error)}`));
   };
   setInterval(() => void syncSheets(), config.sheets.syncIntervalMinutes * MINUTE_MS).unref();
 

@@ -197,8 +197,11 @@ Each area is one slash command with an `action` option (`/group action:promote p
 | `applications.bdx` | `/applications action:list or post`, the application card, the reason form, background checks, the applicant's DM |
 | `admin.bdx` | `/admin action:panel, endshift, endevent, addtime or removetime`, the admin log |
 | `diagnose.bdx` | `/diagnose` |
+| `academy.bdx` | `/academy action:info, set, remove, list or sync`, with the four phases: Orientation (1), Academy (2), Final exam (3) and Waiting for division (4) |
 
 The folder only loads while `AESU_ENABLED=yes`. The panel's **Shifts** page shows who is on shift (and can end a shift), and brings the old tracker's settings over in one paste.
+
+The academy keeps an Academy tab in your Google Sheet. Staff move people with `/academy action:set` or by changing the Phase cell in the sheet, and each phase's Discord role follows either way. Adding a row with a Discord ID and a phase adds them; deleting the row takes them out. The sheet is read every few minutes, or straight away with `/academy action:sync`. Set the four roles with `ACADEMY_ROLE_ORIENTATION`, `ACADEMY_ROLE_ACADEMY`, `ACADEMY_ROLE_FINAL_EXAM` and `ACADEMY_ROLE_WAITING`, and who may move people with `ACADEMY_STAFF_ROLE_ID`.
 
 Linking no longer uses Roblox's sign in page. `/connect` asks Bloxlink who the member is and they confirm it. If Bloxlink doesn't know them, they run `/connect username:...` and prove the account is theirs by putting a short code in their Roblox profile About. The Bloxlink key is read from Verify's settings, or set `BLOXLINK_KEY` and `BLOXLINK_GUILD_ID`.
 

@@ -62,8 +62,9 @@ module.exports = ({ need, fail, arg, num }) => {
     promotion: (ctx, cfg) => !cfg.ranks.staffRoleId || holds(ctx, cfg.ranks.staffRoleId),
     group: (ctx, cfg) => !cfg.group.staffRoleId || holds(ctx, cfg.group.staffRoleId),
     squad: (ctx, cfg) => !cfg.squads.staffRoleId || holds(ctx, cfg.squads.staffRoleId),
+    academy: (ctx, cfg) => !cfg.academy.staffRoleId || holds(ctx, cfg.academy.staffRoleId),
   };
-  const GATE_ROLE = { staff: 'discord.staffRoleId', admin: 'discord.adminRoleId', promotion: 'ranks.staffRoleId', group: 'group.staffRoleId', squad: 'squads.staffRoleId' };
+  const GATE_ROLE = { staff: 'discord.staffRoleId', admin: 'discord.adminRoleId', promotion: 'ranks.staffRoleId', group: 'group.staffRoleId', squad: 'squads.staffRoleId', academy: 'academy.staffRoleId' };
 
   function allowed(ctx, gate) {
     const check = GATES[gate];
@@ -1067,7 +1068,90 @@ module.exports = ({ need, fail, arg, num }) => {
     } },
   };
 
+
+  // ───────────── academy ─────────────
+  function memberView(id, entry) {
+    const { PHASES } = mod('academy');
+    const phase = PHASES.find((p) => p.key === entry.phase);
+    return {
+      discordId: id, mention: `<@${id}>`, phase: entry.phase, phaseLabel: phase?.label ?? entry.phase, phaseNumber: phase?.number ?? '',
+      since: `<t:${Math.floor(entry.since / 1000)}:R>`, sinceDate: `<t:${Math.floor(entry.since / 1000)}:D>`,
+      movedBy: !entry.by ? '' : entry.by === 'sheet' ? 'the sheet' : `<@${entry.by}>`, notes: entry.notes ?? '',
+    };
+  }
+
+  const academyFns = {
+    // $academyInfo[user ID?] → ok with phaseLabel, phaseNumber, since, movedBy, notes,
+    // worked (all shift time), roblox; or none when they are not in the academy
+    academyInfo: { async fn(ctx, a) {
+      const { academy, store, manager } = rt();
+      const id = stripId(arg(a, 0, ctx.author.id));
+      const entry = await academy.get(id);
+      if (!entry) return refuse(ctx, 'none', `<@${id}> is not in the academy.`);
+      const { summarise } = mod('shifts/manager');
+      const link = await store.getLinkByDiscordId(id);
+      ctx.json = {
+        code: 'ok', ...memberView(id, entry),
+        worked: mod('util/time').formatDuration(summarise(await manager.listShifts(id, {})).workedMs),
+        roblox: link?.robloxUsername ?? '',
+      };
+      return 'ok';
+    } },
+
+    // $academySet[user ID;phase] → ok (phaseLabel, phaseNumber, was, roleNote), or
+    // unknown_phase, same. Adds them when they are new. The roles and sheet follow.
+    academySet: { async fn(ctx, a) {
+      const [who, phaseText] = need(a, 2, '$academySet[user ID;phase]');
+      const { academy } = rt();
+      const { findPhase, PHASES } = mod('academy');
+      const phase = findPhase(phaseText);
+      if (!phase) return refuse(ctx, 'unknown_phase', `There is no phase called ${phaseText}. The phases are ${PHASES.map((p) => p.label).join(', ')}.`);
+      const id = stripId(who);
+      const current = await academy.get(id);
+      if (current?.phase === phase.key) return refuse(ctx, 'same', `<@${id}> is already on ${phase.label}.`);
+      const { before, after, roleNote } = await academy.setPhase(id, phase.key, { by: ctx.author.id, guildId: ctx.guild?.id ?? null });
+      const was = before ? PHASES.find((p) => p.key === before.phase)?.label ?? '' : '';
+      ctx.json = { code: 'ok', ...memberView(id, after), was, added: before ? 'no' : 'yes', roleNote: roleNote ?? '' };
+      return 'ok';
+    } },
+
+    // $academyRemove[user ID] → ok (was, roleNote), or none
+    academyRemove: { async fn(ctx, a) {
+      const id = stripId(need(a, 1, '$academyRemove[user ID]')[0]);
+      const { academy } = rt();
+      const { removed, roleNote } = await academy.remove(id, { guildId: ctx.guild?.id ?? null });
+      if (!removed) return refuse(ctx, 'none', `<@${id}> is not in the academy.`);
+      ctx.json = { code: 'ok', discordId: id, was: memberView(id, removed).phaseLabel, roleNote: roleNote ?? '' };
+      return 'ok';
+    } },
+
+    // $academyList[phase?] → phases (label, number, count, list) and count, for one phase or all
+    academyList: { async fn(ctx, a) {
+      const { academy } = rt();
+      const { PHASES, findPhase } = mod('academy');
+      const only = arg(a, 0) ? findPhase(arg(a, 0)) : null;
+      const roster = await academy.roster();
+      const entries = Object.entries(roster).sort((x, y) => x[1].since - y[1].since);
+      const phases = PHASES.filter((p) => !only || p.key === only.key).map((p) => {
+        const people = entries.filter(([, e]) => e.phase === p.key).map(([id, e]) => memberView(id, e));
+        return { key: p.key, label: p.label, number: p.number, count: people.length, list: people.map((m) => `${m.mention} · ${m.since}`).join('\n') || 'Nobody' };
+      });
+      ctx.json = { count: phases.reduce((n, p) => n + p.count, 0), phases };
+      return '';
+    } },
+
+    // $academySync → ok (added, moved, removed) or off when Google Sheets is not set up
+    academySync: { async fn(ctx) {
+      const { academy } = rt();
+      const result = await academy.syncSheet();
+      if (result.off) return refuse(ctx, 'off', 'Google Sheets is not set up, so there is nothing to sync with.');
+      ctx.json = { code: 'ok', ...result };
+      return 'ok';
+    } },
+  };
+
   return {
+    ...academyFns,
     ...diagnoseFns,
     ...adminFns,
     ...appFns,
@@ -1080,16 +1164,16 @@ module.exports = ({ need, fail, arg, num }) => {
     // yes when the tracker is running
     aesuOn: { fn: () => (runtime.started ? 'yes' : 'no') },
 
-    // $aesuAllowed[staff|admin|promotion|group|squad] → yes or no for whoever ran the command
+    // $aesuAllowed[staff|admin|promotion|group|squad|academy] → yes or no for whoever ran the command
     aesuAllowed: { fn(ctx, a) {
       rt();
-      return allowed(ctx, need(a, 1, '$aesuAllowed[staff|admin|promotion|group|squad]')[0].trim().toLowerCase()) ? 'yes' : 'no';
+      return allowed(ctx, need(a, 1, '$aesuAllowed[staff|admin|promotion|group|squad|academy]')[0].trim().toLowerCase()) ? 'yes' : 'no';
     } },
 
     // The role a gate uses, as a mention, or nothing when it is not set
     aesuRole: { fn(ctx, a) {
       rt();
-      const gate = need(a, 1, '$aesuRole[staff|admin|promotion|group|squad]')[0].trim().toLowerCase();
+      const gate = need(a, 1, '$aesuRole[staff|admin|promotion|group|squad|academy]')[0].trim().toLowerCase();
       if (!GATE_ROLE[gate]) fail(`unknown permission "${gate}"`);
       const [section, key] = GATE_ROLE[gate].split('.');
       const id = mod('config/index').config[section][key];
