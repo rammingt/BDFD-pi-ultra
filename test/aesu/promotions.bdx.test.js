@@ -22,18 +22,18 @@ describe('promotion commands in BDX', () => {
   });
 
   it('shows progress with a bar per requirement', async () => {
-    const r = await h.run('promote check', { options: {} });
+    const r = await h.run('promote', { options: { action: 'check' } });
     assert.equal(r.stopped, false, r.content);
     const text = h.text(r);
     assert.match(text, /### Promotion to Guard/);
     assert.match(text, /Currently \*\*Recruit\*\*/);
-    assert.match(text, /Run `\/promote request` to promote\./);
+    assert.match(text, /Run `\/promote action:request` to promote\./);
     assert.match(text, /✅ \*\*.+\*\*\n`████████████` 2h 30m \/ 2h/);
     assert.match(text, /\*\*General requirements\*\*\n• Pass the exam/);
   });
 
   it('posts a request card for staff, pinging their role', async () => {
-    const r = await h.run('promote request', { options: {} });
+    const r = await h.run('promote', { options: { action: 'request' } });
     assert.match(r.content, /your request is sent/);
     const card = h.client.sent.at(-1);
     assert.equal(card.channelId, '700000000000000010');
@@ -59,7 +59,7 @@ describe('promotion commands in BDX', () => {
   });
 
   it('lists the ranks', async () => {
-    const r = await h.run('promote ranks', { options: {} });
+    const r = await h.run('promote', { options: { action: 'ranks' } });
     assert.equal(r.stopped, false, r.content);
     assert.match(h.text(r), /` 20` \*\*Guard\*\* \(needs approval · 2 member\(s\)\)\n2h of Shift Guard, 1 event hosted/);
   });

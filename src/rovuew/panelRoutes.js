@@ -205,7 +205,7 @@ module.exports = (reply, author) => ({
     return reply(400, { error: 'kind has to be flags or keywords' });
   },
 
-  // Quick look from the panel, same as /check, /checkclothes, /checkbadges
+  // Quick look from the panel, same as /check with type accessories, clothing or badges
   'POST /api/rovuew/check': async (q, body) => {
     const svc = mod('checkService');
     const run = { accessories: svc.checkAccessories, clothing: svc.checkClothing, badges: svc.checkBadges }[body.kind || 'accessories'];

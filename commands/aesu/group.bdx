@@ -5,10 +5,18 @@ $ephemeral
 $onlyIf[$aesuAllowed[group]==yes;$if[$aesuRole[group]==;You do not have permission to do that.;Only $aesuRole[group] can manage the group.]]
 $onlyIf[$groupOn==yes;Group management is off. Set `ROBLOX_GROUP_ID` and `ROBLOX_GROUP_COOKIE` (an account with a ranking permission in that group), then restart.]
 ---
-@name group pending
+@name group
 @type slash
-@parent Manage the Roblox group: join requests, ranks and members.
-@description Everybody waiting to join the group.
+@description Manage the Roblox group: join requests, ranks and members.
+@option action:string:What to do.:required:pending=Pending\: Everybody waiting to join the group.|accept=Accept\: Accept somebody into the group.|decline=Decline\: Turn down somebody's request to join.|rank=Rank\: Set somebody to an exact rank.|promote=Promote\: Move somebody one rank up.|demote=Demote\: Move somebody one rank down.|exile=Exile\: Remove somebody from the group.|info=Info\: Somebody's rank and whether they are waiting to join.|roles=Roles\: The rank ladder and how many hold each one.
+@option player:string:Roblox username, Roblox id, or a Discord mention.
+@option role:string:Rank name or number, from /group action:roles.
+$c[Runs the snippet for the action picked, like group_pending. Each one is below.]
+$include[group_$message[action]]
+---
+@name group_pending
+@type snippet
+$c[/group action:pending. Everybody waiting to join the group.]
 $include[groupgate]
 $var[r;$groupPending]
 $onlyIf[$var[r]==ok;$json[error]]
@@ -16,68 +24,68 @@ $onlyIf[$json[count]>0;Nobody is waiting to join the group.]
 $addContainer[pending]
 $addTextDisplay[**$json[count] pending request(s)**
 $jsonList[requests;{profile} {when}]]
-$addTextDisplay[-# Accept one with `/group accept`.]
+$addTextDisplay[-# Accept one with `/group action:accept`.]
 $closeContainer
 ---
-@name group accept
-@type slash
-@description Accept somebody into the group.
-@option player:string:Roblox username, Roblox id, or a Discord mention.:required
+@name group_accept
+@type snippet
+$c[/group action:accept. Accept somebody into the group.]
+$onlyIf[$message[player]!=;Fill in the **player** option for /group action:accept.]
 $include[groupgate]
 $var[r;$groupDecide[accept;$message[player]]]
 $onlyIf[$var[r]==ok;$json[error]]
 $json[user] is in the group.
 ---
-@name group decline
-@type slash
-@description Turn down somebody's request to join.
-@option player:string:Roblox username, Roblox id, or a Discord mention.:required
+@name group_decline
+@type snippet
+$c[/group action:decline. Turn down somebody's request to join.]
+$onlyIf[$message[player]!=;Fill in the **player** option for /group action:decline.]
 $include[groupgate]
 $var[r;$groupDecide[decline;$message[player]]]
 $onlyIf[$var[r]==ok;$json[error]]
 $json[user]'s request was declined.
 ---
-@name group rank
-@type slash
-@description Set somebody to an exact rank.
-@option player:string:Roblox username, Roblox id, or a Discord mention.:required
-@option role:string:Rank name or number, from /group roles.:required
+@name group_rank
+@type snippet
+$c[/group action:rank. Set somebody to an exact rank.]
+$onlyIf[$message[player]!=;Fill in the **player** option for /group action:rank.]
+$onlyIf[$message[role]!=;Fill in the **role** option for /group action:rank.]
 $include[groupgate]
 $var[r;$groupRank[$message[player];$message[role]]]
 $onlyIf[$var[r]==ok;$json[error]]
 $json[user] is now $json[role;label].
 ---
-@name group promote
-@type slash
-@description Move somebody one rank up.
-@option player:string:Roblox username, Roblox id, or a Discord mention.:required
+@name group_promote
+@type snippet
+$c[/group action:promote. Move somebody one rank up.]
+$onlyIf[$message[player]!=;Fill in the **player** option for /group action:promote.]
 $include[groupgate]
 $var[r;$groupStep[up;$message[player]]]
 $onlyIf[$var[r]==ok;$json[error]]
 $json[user] is now $json[role;label].
 ---
-@name group demote
-@type slash
-@description Move somebody one rank down.
-@option player:string:Roblox username, Roblox id, or a Discord mention.:required
+@name group_demote
+@type snippet
+$c[/group action:demote. Move somebody one rank down.]
+$onlyIf[$message[player]!=;Fill in the **player** option for /group action:demote.]
 $include[groupgate]
 $var[r;$groupStep[down;$message[player]]]
 $onlyIf[$var[r]==ok;$json[error]]
 $json[user] is now $json[role;label].
 ---
-@name group exile
-@type slash
-@description Remove somebody from the group.
-@option player:string:Roblox username, Roblox id, or a Discord mention.:required
+@name group_exile
+@type snippet
+$c[/group action:exile. Remove somebody from the group.]
+$onlyIf[$message[player]!=;Fill in the **player** option for /group action:exile.]
 $include[groupgate]
 $var[r;$groupExile[$message[player]]]
 $onlyIf[$var[r]==ok;$json[error]]
 $json[user] was removed from the group. They were $json[was;label].
 ---
-@name group info
-@type slash
-@description Somebody's rank and whether they are waiting to join.
-@option player:string:Roblox username, Roblox id, or a Discord mention.:required
+@name group_info
+@type snippet
+$c[/group action:info. Somebody's rank and whether they are waiting to join.]
+$onlyIf[$message[player]!=;Fill in the **player** option for /group action:info.]
 $include[groupgate]
 $var[r;$groupInfo[$message[player]]]
 $onlyIf[$var[r]==ok;$json[error]]
@@ -90,9 +98,9 @@ $if[$json[linked]==no]
 No Discord account is linked to them.
 $endif
 ---
-@name group roles
-@type slash
-@description The rank ladder and how many hold each one.
+@name group_roles
+@type snippet
+$c[/group action:roles. The rank ladder and how many hold each one.]
 $include[groupgate]
 $var[r;$groupRoles]
 $onlyIf[$var[r]==ok;$json[error]]

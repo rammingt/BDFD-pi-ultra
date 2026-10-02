@@ -12,7 +12,7 @@ describe('event commands in BDX', () => {
   before(async () => { h = await setup({ ALLOW_MANUAL_START_OUTSIDE_GAME: 'yes' }); });
 
   it('posts an event with a button per sign up option', async () => {
-    const r = await h.run('event create', { userId: HOST, options: { name: 'Patrol', start: '2h', type: 'shift_guard', roles: 'Guard:2, Medic' } });
+    const r = await h.run('event', { userId: HOST, options: { action: 'create', name: 'Patrol', start: '2h', type: 'shift_guard', roles: 'Guard:2, Medic' } });
     assert.equal(r.stopped, false, r.content);
     assert.match(r.content, /\*\*Patrol\*\* is up in <#700000000000000009>/);
     id = /Event id `(\w+)`/.exec(r.content)[1];
@@ -24,7 +24,7 @@ describe('event commands in BDX', () => {
   });
 
   it('turns away bad input', async () => {
-    const r = await h.run('event create', { userId: HOST, options: { name: 'X', start: 'whenever', type: 'shift_guard' } });
+    const r = await h.run('event', { userId: HOST, options: { action: 'create', name: 'X', start: 'whenever', type: 'shift_guard' } });
     assert.equal(r.stopped, true);
     assert.match(r.content, /start/i);
   });
@@ -50,9 +50,9 @@ describe('event commands in BDX', () => {
   });
 
   it('lists and shows events', async () => {
-    let r = await h.run('event list', { userId: HOST, options: {} });
+    let r = await h.run('event', { userId: HOST, options: { action: 'list' } });
     assert.match(h.text(r), new RegExp(`\`${id}\` \\*\\*Patrol\\*\\*`));
-    r = await h.run('event info', { userId: HOST, options: { id } });
+    r = await h.run('event', { userId: HOST, options: { action: 'info', id } });
     assert.match(h.text(r), /## Patrol/);
     assert.equal(h.buttons(r).length, 0, 'no buttons on the private copy');
   });

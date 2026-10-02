@@ -145,7 +145,7 @@ async function boot({ client, engine, log, describeError }) {
     if (!isPresenceTrackingEnabled()) {
       log.warn(
         'Presence tracking is off (needs ROBLOX_COOKIE plus TRACKED_UNIVERSE_IDS or TRACKED_PLACE_IDS). ' +
-          'Shifts can still be run by hand from /shift manage.',
+          'Shifts can still be run by hand from /shift action:manage.',
       );
     } else {
       const cookie = await verifyCookie();

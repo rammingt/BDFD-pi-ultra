@@ -17,12 +17,12 @@ describe('application commands in BDX', () => {
   });
 
   it('keeps applications to the group staff role', async () => {
-    const r = await h.run('applications list', { options: {} });
+    const r = await h.run('applications', { options: { action: 'list' } });
     assert.equal(r.content, 'Only <@&333> can read applications.');
   });
 
   it('lists the newest first, a page at a time, marking the unposted ones', async () => {
-    const r = await h.run('applications list', { options: {}, roles: ['333'] });
+    const r = await h.run('applications', { options: { action: 'list' }, roles: ['333'] });
     assert.equal(r.stopped, false, r.content);
     const lines = h.text(r).split('\n').filter((line) => line.startsWith('`#'));
     assert.equal(lines.length, 10);
@@ -47,7 +47,7 @@ describe('application commands in BDX', () => {
   });
 
   it('posts a card with the buttons carrying who it is', async () => {
-    const r = await h.run('applications post', { options: { number: '1' }, roles: ['333'] });
+    const r = await h.run('applications', { options: { action: 'post', number: '1' }, roles: ['333'] });
     assert.equal(r.stopped, false, r.content);
     assert.equal(r.content, 'Posted 1 application(s) to <#700000000000000011>: **applicant_1**');
     const card = h.client.sent.at(-1);

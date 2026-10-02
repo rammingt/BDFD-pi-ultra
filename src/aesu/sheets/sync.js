@@ -166,7 +166,7 @@ class SheetsSync {
       }
 
       if (ladder.length === 0) {
-        log.warn('There are no ranks to sync. Set ROBLOX_GROUP_ID and run /promote sync.');
+        log.warn('There are no ranks to sync. Set ROBLOX_GROUP_ID and run /promote action:sync.');
         return { ranks: 0, problems: [] };
       }
 

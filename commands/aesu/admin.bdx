@@ -1,7 +1,17 @@
-@name admin panel
+@name admin
 @type slash
-@parent End shifts and events, and correct banked time.
-@description Who is on shift, what is running, and the controls for both.
+@description End shifts and events, and correct banked time.
+@option action:string:What to do.:required:panel=Panel\: Who is on shift, what is running, and the controls for both.|endshift=Endshift\: End somebody's shift for them. The time so far is banked.|endevent=Endevent\: End an event now and bank everybody's attendance.|addtime=Addtime\: Add banked time to somebody, on one shift type.|removetime=Removetime\: Take banked time off somebody, on one shift type.
+@option user:user:Whose shift to end.
+@option event:string:Event id, from /event action:list.
+@option type:string:Which shift type it counts as.::from shiftTypes
+@option time:string:How much. 90m, 2h, 1h30m.
+$c[Runs the snippet for the action picked, like admin_panel. Each one is below.]
+$include[admin_$message[action]]
+---
+@name admin_panel
+@type snippet
+$c[/admin action:panel. Who is on shift, what is running, and the controls for both.]
 $ephemeral
 $var[r;$adminPanel]
 $onlyIf[$var[r]==ok;$json[error]]
@@ -25,7 +35,7 @@ $addSelectMenu[aesu:admin_end_event;End an event and bank its attendance]
 $addSelectOptions[events;{name};{id};{description}]
 $endif
 $addButton[yes;aesu:admin_refresh;Refresh;secondary]
-$addTextDisplay[-# Only you can see this. /admin addtime and /admin removetime correct banked hours.]
+$addTextDisplay[-# Only you can see this. /admin action:addtime and /admin action:removetime correct banked hours.]
 $closeContainer
 ---
 @name aesu:admin_refresh
@@ -60,10 +70,10 @@ $var[r;$adminPanel]
 $var[outcome]
 $include[adminpanel]
 ---
-@name admin endshift
-@type slash
-@description End somebody's shift for them. The time so far is banked.
-@option user:user:Whose shift to end.:required
+@name admin_endshift
+@type snippet
+$c[/admin action:endshift. End somebody's shift for them. The time so far is banked.]
+$onlyIf[$message[user]!=;Fill in the **user** option for /admin action:endshift.]
 $ephemeral
 $var[r;$adminEndShift[$message[user]]]
 $if[$var[r]==notonshift]
@@ -72,32 +82,32 @@ $endif
 $onlyIf[$var[r]==ok;$json[error]]
 Ended <@$json[discordId]>'s $json[typeLabel]. **$json[banked]** banked.
 ---
-@name admin endevent
-@type slash
-@description End an event now and bank everybody's attendance.
-@option event:string:Event id, from /event list.:required
+@name admin_endevent
+@type snippet
+$c[/admin action:endevent. End an event now and bank everybody's attendance.]
+$onlyIf[$message[event]!=;Fill in the **event** option for /admin action:endevent.]
 $ephemeral
 $var[r;$adminEndEvent[$message[event]]]
 $onlyIf[$var[r]==ok;$json[error]]
 **$json[name]** is closed. $json[banked] attendee(s) had their time logged.
 ---
-@name admin addtime
-@type slash
-@description Add banked time to somebody, on one shift type.
-@option user:user:Who to credit.:required
-@option type:string:Which shift type it counts as.:required:from shiftTypes
-@option time:string:How much. 90m, 2h, 1h30m.:required
+@name admin_addtime
+@type snippet
+$c[/admin action:addtime. Add banked time to somebody, on one shift type.]
+$onlyIf[$message[user]!=;Fill in the **user** option for /admin action:addtime.]
+$onlyIf[$message[type]!=;Fill in the **type** option for /admin action:addtime.]
+$onlyIf[$message[time]!=;Fill in the **time** option for /admin action:addtime.]
 $ephemeral
 $var[r;$adminAdjust[add;$message[user];$message[type];$message[time]]]
 $onlyIf[$var[r]==ok;$json[error]]
 **$json[signed]** of $json[typeLabel] for <@$json[discordId]>. They now have **$json[after]** of it.
 ---
-@name admin removetime
-@type slash
-@description Take banked time off somebody, on one shift type.
-@option user:user:Who to take it from.:required
-@option type:string:Which shift type to take it off.:required:from shiftTypes
-@option time:string:How much. 90m, 2h, 1h30m.:required
+@name admin_removetime
+@type snippet
+$c[/admin action:removetime. Take banked time off somebody, on one shift type.]
+$onlyIf[$message[user]!=;Fill in the **user** option for /admin action:removetime.]
+$onlyIf[$message[type]!=;Fill in the **type** option for /admin action:removetime.]
+$onlyIf[$message[time]!=;Fill in the **time** option for /admin action:removetime.]
 $ephemeral
 $var[r;$adminAdjust[remove;$message[user];$message[type];$message[time]]]
 $onlyIf[$var[r]==ok;$json[error]]

@@ -8,7 +8,7 @@ describe('shift commands in BDX', () => {
   before(async () => { h = await setup(); });
 
   it('shows the picker when nobody is on shift', async () => {
-    const r = await h.run('shift manage', { options: {} });
+    const r = await h.run('shift', { options: { action: 'manage' } });
     assert.equal(r.stopped, false, r.content);
     assert.match(h.text(r), /Pick the kind of shift/);
     const start = h.buttons(r).find((b) => b.custom_id?.startsWith('aesu:panel_start'));
@@ -59,7 +59,7 @@ describe('shift commands in BDX', () => {
   });
 
   it('lists history and totals', async () => {
-    let r = await h.run('shift history', { options: {} });
+    let r = await h.run('shift', { options: { action: 'history' } });
     assert.equal(r.stopped, false, r.content);
     assert.match(h.text(r), /\*\*\d+s\*\* · Shift Guard/);
     r = await h.run('checktime', { options: { range: 'week' } });
@@ -91,7 +91,7 @@ describe('shift commands in BDX', () => {
     assert.match(h.text(r), /Pick what you are running/);
     assert.match(h.text({ content: '', layout: h.client.edits.at(-1).payload.components }), /Logging this session/);
     r = await h.run('aesu:prompt_decline', { args: ['100000000000000001'], messageId: '43' });
-    assert.equal(r.content, 'Nothing was logged. Run `/shift manage` if you change your mind.');
+    assert.equal(r.content, 'Nothing was logged. Run `/shift action:manage` if you change your mind.');
   });
 
   it('explains that linking is not set up', async () => {

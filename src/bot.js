@@ -135,11 +135,16 @@ async function startBot({ token, commandsDir, dataFile, prefix, watch = true, be
     const opensForm = uses(cmd.ast, 'showModal');
     // Discord drops an interaction nobody answers within 3 seconds. If the command
     // is still busy (an HTTP call, $wait) by then, tell Discord we're working on it.
+    // $ephemeral or $updateMessage can sit in a snippet the command picks while it
+    // runs (like /group running group_roles), so look at what it has asked for so far.
+    let live = null;
     let deferring = null;
     const timer = opensForm ? null : setTimeout(() => {
-      deferring = (mayUpdate ? i.deferUpdate() : i.deferReply({ ephemeral: uses(cmd.ast, 'ephemeral') })).then(() => true, () => false);
+      const updateNow = onMessage && (mayUpdate || live?.out.update);
+      deferring = (updateNow ? i.deferUpdate() : i.deferReply({ ephemeral: Boolean(live?.out.ephemeral) || uses(cmd.ast, 'ephemeral') }))
+        .then(() => (updateNow ? 'update' : 'reply'), () => false);
     }, 2000);
-    const r = await engine.execute(cmd, { ...baseEnv(i.user, i.guild, i.channel, i.member), messageId: onMessage ? i.message.id : '', ...extra })
+    const r = await engine.execute(cmd, { ...baseEnv(i.user, i.guild, i.channel, i.member), messageId: onMessage ? i.message.id : '', ...extra, onContext: (ctx) => { live = ctx; } })
       .finally(() => clearTimeout(timer));
 
     if (r.modal && !r.stopped) {
@@ -162,7 +167,7 @@ async function startBot({ token, commandsDir, dataFile, prefix, watch = true, be
       r.ephemeral = true;
     }
     const deferred = deferring && await deferring;
-    const updating = mayUpdate && r.update;
+    const updating = onMessage && r.update;
 
     if (updating && !r.stopped && !r.dm) {
       // A stopped command's message is an error for this person only, so it never replaces the panel.
@@ -173,7 +178,7 @@ async function startBot({ token, commandsDir, dataFile, prefix, watch = true, be
     }
     if (deferred) {
       // Deferred as an update, but the answer is a new message: send it privately beside the panel.
-      if (mayUpdate) { if (payload) await i.followUp({ ...payload, ephemeral: true }); return; }
+      if (deferred === 'update') { if (payload) await i.followUp({ ...payload, ephemeral: true }); return; }
       await i.editReply(payload || { content: '✅' });
       return;
     }

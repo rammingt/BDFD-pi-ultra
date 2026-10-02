@@ -138,7 +138,7 @@ async function diagnose({ store, client, userId, guild }) {
     } else {
       groupLines.push(`Managing **${group.name}** as **${group.role}**`);
       // A cookie that can read the group but not rank anybody looks like a working
-      // setup until the first /group promote fails.
+      // setup until the first /group action:promote fails.
       const missing = [group.can?.accept ? null : 'accept join requests', group.can?.rank ? null : 'change ranks', group.can?.remove ? null : 'remove members'].filter(Boolean);
       if (missing.length) groupStatus = 'bad';
       groupLines.push(missing.length === 0
@@ -169,7 +169,7 @@ async function diagnose({ store, client, userId, guild }) {
   add('Prompt channel', promptChannel ? 'ok' : 'bad', channelLines);
 
   if (!isPresenceTrackingEnabled()) {
-    return done({ status: 'bad', text: '**Presence tracking is off.** It needs `ROBLOX_COOKIE` plus at least one of `TRACKED_UNIVERSE_IDS` or `TRACKED_PLACE_IDS`. Shifts still work by hand from `/shift manage`.' });
+    return done({ status: 'bad', text: '**Presence tracking is off.** It needs `ROBLOX_COOKIE` plus at least one of `TRACKED_UNIVERSE_IDS` or `TRACKED_PLACE_IDS`. Shifts still work by hand from `/shift action:manage`.' });
   }
 
   const cookie = await verifyCookie();

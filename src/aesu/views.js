@@ -76,7 +76,7 @@ function shiftView(shift, now = Date.now()) {
     endReason: shift.endReason ?? '',
     endReasonLabel: shift.endReason ? END_REASON_LABEL[shift.endReason] ?? shift.endReason : '',
     adjusted: yes(adjustment),
-    // what /shift history puts after the type
+    // what /shift action:history puts after the type
     note: adjustment ? ' *(adjusted)*' : shift.status === 'ended' ? '' : ' *(running)*',
   };
 }

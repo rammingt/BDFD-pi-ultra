@@ -27,12 +27,11 @@ In the Discord Developer Portal enable the **Message Content** and **Server Memb
 
 | Command | What it does |
 |---|---|
-| `/check`, `/checkclothes`, `/checkbadges` | Checks accessories, clothing or badges against the flag list, plus the automatic name scan |
-| `/fullcheck user discord?` | All three at once, plus XTracker, Server Sweep and TASE |
+| `/check user type? discord?` | Checks accessories (or `type:` clothing or badges) against the flag list, plus the automatic name scan. `type:full` checks all three at once, plus XTracker, Server Sweep and TASE |
 | `/searchcatalog` | Searches the catalog and lets you add results to the flag list from a menu (admins) |
 | `/resolvelink` | Turns a share link into an asset ID, name and link |
-| `/flag add`, `/flag remove`, `/flag list` | The flag list (adding and removing needs an admin) |
-| `/autoflag add`, `/autoflag remove`, `/autoflag list` | Custom keywords for the automatic name scan (admins) |
+| `/flag action:add, remove or list` | The flag list (adding and removing needs an admin) |
+| `/autoflag action:add, remove or list` | Custom keywords for the automatic name scan (admins) |
 
 Admins are people with Manage Server, the `ROVUEW_ADMIN_ROLE_ID` role, or an ID in `ROVUEW_ACCEPTED_USERS`. Every "View full list (JSON)" button DMs the file to whoever ran the command.
 
@@ -86,7 +85,7 @@ Several commands per file? Separate them with a `---` line.
 | `@aliases a, b` | Extra triggers |
 | `@description ...` | Slash command description |
 | `@option name:type:description:required:choices` | Slash option (`string`, `integer`, `number`, `boolean`, `user`, `channel`, `role`), read it with `$message[name]`. Choices look like `badge=Badge\|accessory=Accessory`, or `from shiftTypes` for a list that follows your settings. Write `\:` for a colon inside a description |
-| `@name flag add` | A space makes a slash subcommand: `/flag add` |
+| `@name flag add` | A space makes a slash subcommand: `/flag add`. Each one is listed on its own in Discord, so for a long list, one command with an `action` option is easier to find (see `commands/aesu/group.bdx`) |
 | `@parent Manage flags` | Description of the `/flag` group (optional) |
 | `@every 1h` | For `@type interval` (use `$useChannel[id]` to choose where it posts) |
 
@@ -186,15 +185,17 @@ Buttons and slash commands that take longer than 2 seconds are deferred automati
 
 The shift tracker is rebuilt on BDX. Its engine (the database, the presence watcher, events, ranks, squads, Google Sheets, the Roblox group, `/connect`'s web page) is the old tracker's own code in `src/aesu`, turned into plain JavaScript with its logic and comments kept, and it uses the **same database and tables**, so every link, shift and event carries over. Everything people see is BDX in `commands/aesu`, which you can edit in the panel like any other command.
 
+Each area is one slash command with an `action` option (`/group action:promote player:...`), so the command list stays short. The code for each action is a snippet named after it, like `group_promote`, right under the command.
+
 | File | Commands |
 |---|---|
-| `shifts.bdx` | `/shift manage`, `/shift history`, `/checktime`, `/connect`, `/disconnect`, the shift panel buttons, join prompts, the shift log, the auto end DM |
-| `events.bdx` | `/event create, list, info, end, cancel`, the event post and its sign up buttons, the start ping, the host away ping |
-| `promotions.bdx` | `/promote request, check, ranks, sync`, the request card with Approve and Deny |
-| `squads.bdx` | `/squad info, set, clear, roster` |
-| `group.bdx` | `/group pending, accept, decline, rank, promote, demote, exile, info, roles`, the group log |
-| `applications.bdx` | `/applications list, post`, the application card, the reason form, background checks, the applicant's DM |
-| `admin.bdx` | `/admin panel, endshift, endevent, addtime, removetime`, the admin log |
+| `shifts.bdx` | `/shift action:manage or history`, `/checktime`, `/connect`, `/disconnect`, the shift panel buttons, join prompts, the shift log, the auto end DM |
+| `events.bdx` | `/event action:create, list, info, end or cancel`, the event post and its sign up buttons, the start ping, the host away ping |
+| `promotions.bdx` | `/promote action:request, check, ranks or sync`, the request card with Approve and Deny |
+| `squads.bdx` | `/squad action:info, set, clear or roster` |
+| `group.bdx` | `/group action:pending, accept, decline, rank, promote, demote, exile, info or roles`, the group log |
+| `applications.bdx` | `/applications action:list or post`, the application card, the reason form, background checks, the applicant's DM |
+| `admin.bdx` | `/admin action:panel, endshift, endevent, addtime or removetime`, the admin log |
 | `diagnose.bdx` | `/diagnose` |
 
 The folder only loads while `AESU_ENABLED=yes`. The panel's **Shifts** page shows who is on shift (and can end a shift), and brings the old tracker's settings over in one paste.

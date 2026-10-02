@@ -15,7 +15,7 @@ async function memberFor(client, guildId, discordId) {
 /**
  * Which squad somebody is in, read straight off their Discord roles. The role is the
  * record: nothing is stored, so this cannot drift out of step with the server, and a
- * squad given out by hand counts exactly the same as one given by `/squad set`.
+ * squad given out by hand counts exactly the same as one given by `/squad action:set`.
  */
 async function resolveSquad(
   client,

@@ -4,12 +4,20 @@ $c[Applications hold what people wrote about themselves, so the role that decide
 $ephemeral
 $onlyIf[$aesuAllowed[group]==yes;$if[$aesuRole[group]==;You do not have permission to do that.;Only $aesuRole[group] can read applications.]]
 ---
-@name applications list
+@name applications
 @type slash
-@parent Browse every application the form has received.
-@description Every application in the form, newest first.
+@description Browse every application the form has received.
+@option action:string:What to do.:required:list=List\: Every application in the form, newest first.|post=Post\: Put an application in the applications channel, with Accept and Deny buttons.
 @option search:string:Only ones whose answers contain this.
 @option page:integer:Which page to open on.
+@option number:integer:Its number from /applications action:list.
+@option to:integer:Post a range, up to this number.
+$c[Runs the snippet for the action picked, like applications_list. Each one is below.]
+$include[applications_$message[action]]
+---
+@name applications_list
+@type snippet
+$c[/applications action:list. Every application in the form, newest first.]
 $include[appgate]
 $var[r;$appList[$message[search];$message[page]]]
 $onlyIf[$var[r]==ok;$json[error]]
@@ -34,7 +42,7 @@ $if[$json[total]==0]
 $addTextDisplay[$if[$json[search]==;The responses tab is empty. Check `APPLICATION_TAB` matches the real tab name.;Nothing matches that. The search looks at the answers, not the questions.]]
 $else
 $addTextDisplay[$jsonList[applications;{line}{unseen}]]
-$addTextDisplay[-# $json[from] to $json[to] of $json[total]$if[$json[pages]>1; · page $json[page]/$json[pages]] · /applications post <number> to put one in the channel]
+$addTextDisplay[-# $json[from] to $json[to] of $json[total]$if[$json[pages]>1; · page $json[page]/$json[pages]] · /applications action:post <number> to put one in the channel]
 $if[$json[pages]>1]
 $addButton[yes;aesu:app_page:$json[previous]:$json[search];Previous;secondary;$json[atStart]]
 $addButton[no;aesu:app_page:$json[next]:$json[search];Next;secondary;$json[atEnd]]
@@ -42,11 +50,10 @@ $endif
 $endif
 $closeContainer
 ---
-@name applications post
-@type slash
-@description Put an application in the applications channel, with Accept and Deny buttons.
-@option number:integer:Its number from /applications list.:required
-@option to:integer:Post a range, up to this number.
+@name applications_post
+@type snippet
+$c[/applications action:post. Put an application in the applications channel, with Accept and Deny buttons.]
+$onlyIf[$message[number]!=;Fill in the **number** option for /applications action:post.]
 $include[appgate]
 $var[r;$appPost[$message[number];$message[to]]]
 $if[$var[r]==partial]

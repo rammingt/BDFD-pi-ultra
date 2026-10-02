@@ -13,13 +13,13 @@ describe('admin, squad, group and diagnose commands in BDX', () => {
   });
 
   it('asks for Administrator when no admin role is set', async () => {
-    const r = await h.run('admin panel', { options: {} });
+    const r = await h.run('admin', { options: { action: 'panel' } });
     assert.equal(r.content, 'This needs the **Administrator** permission, or an `ADMIN_ROLE_ID` role.');
   });
 
   it('shows who is on shift and ends one from the menu, logging it', async () => {
     await h.manager.start({ discordId: WORKER, guildId: null, type: 'shift_guard', source: 'panel', robloxUsername: 'worker' });
-    let r = await h.run('admin panel', { options: {}, admin: true });
+    let r = await h.run('admin', { options: { action: 'panel' }, admin: true });
     assert.equal(r.stopped, false, r.content);
     assert.match(h.text(r), /\*\*On shift \(1\)\*\*\n<@100000000000000002> · Shift Guard, \d+s/);
     const menu = h.buttons(r).find((b) => b.custom_id === 'aesu:admin_end_shift');
@@ -34,25 +34,31 @@ describe('admin, squad, group and diagnose commands in BDX', () => {
   });
 
   it('corrects banked time, and will not take more than there is', async () => {
-    let r = await h.run('admin addtime', { options: { user: WORKER, type: 'deployment', time: '1h30m' }, admin: true });
+    let r = await h.run('admin', { options: { action: 'addtime', user: WORKER, type: 'deployment', time: '1h30m' }, admin: true });
     assert.equal(r.content, '**+1h 30m** of Deployment for <@100000000000000002>. They now have **1h 30m** of it.');
-    r = await h.run('admin removetime', { options: { user: WORKER, type: 'deployment', time: '2h' }, admin: true });
+    r = await h.run('admin', { options: { action: 'removetime', user: WORKER, type: 'deployment', time: '2h' }, admin: true });
     assert.match(r.content, /only has \*\*1h 30m\*\* of Deployment, so 2h 00m cannot come off/);
-    r = await h.run('admin removetime', { options: { user: WORKER, type: 'deployment', time: '30m' }, admin: true });
+    r = await h.run('admin', { options: { action: 'removetime', user: WORKER, type: 'deployment', time: '30m' }, admin: true });
     assert.match(r.content, /\*\*-30m 00s\*\* of Deployment/);
-    r = await h.run('shift history', { options: { user: WORKER }, admin: true });
+    r = await h.run('shift', { options: { action: 'history', user: WORKER }, admin: true });
     assert.match(h.text(r), /\*\*-30m 00s\*\* · Deployment \*\(adjusted\)\*/);
   });
 
   it('keeps /group to its staff role, and says when no group is set', async () => {
-    let r = await h.run('group roles', { options: {} });
+    let r = await h.run('group', { options: { action: 'roles' } });
     assert.equal(r.content, 'Only <@&333> can manage the group.');
-    r = await h.run('group roles', { options: {}, roles: ['333'] });
+    r = await h.run('group', { options: { action: 'roles' }, roles: ['333'] });
     assert.match(r.content, /Group management is off/);
   });
 
+  it('asks for an option the picked action needs', async () => {
+    const r = await h.run('group', { options: { action: 'accept' }, roles: ['333'] });
+    assert.equal(r.content, 'Fill in the **player** option for /group action:accept.');
+    assert.equal(r.stopped, true);
+  });
+
   it('reads the squad off Discord roles', async () => {
-    const r = await h.run('squad info', { options: {} });
+    const r = await h.run('squad', { options: { action: 'info' } });
     assert.equal(r.stopped, false, r.content);
     assert.match(r.content, /^<@100000000000000001> is not in a squad\.\nEvents hosted: \*\*0\*\*/);
   });

@@ -95,6 +95,9 @@ class Engine {
       send: env.send || (async () => ''),
       out: { embeds: [], components: [], reactions: [], files: [], layout: [], container: null, containers: {}, reply: false, ephemeral: false, deleteCommand: false, dm: false, channelId: null, allowMentions: false, modal: null },
     };
+    // Lets the bot look at a command while it runs, like whether a snippet it
+    // included has asked for a private reply yet.
+    if (env.onContext) env.onContext(ctx);
     let content;
     let stopped = false;
     try {

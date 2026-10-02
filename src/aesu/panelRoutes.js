@@ -60,7 +60,7 @@ module.exports = (reply, { readEnv, writeEnv, author }) => ({
     };
   },
 
-  // Ends somebody's shift from the panel, the same as /admin endshift
+  // Ends somebody's shift from the panel, the same as /admin action:endshift
   'POST /api/aesu/endshift': async (q, body) => {
     if (!runtime.started) return reply(400, { error: 'The shift tracker is not running' });
     const id = String(body.discordId || '').trim();

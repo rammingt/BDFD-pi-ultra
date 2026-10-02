@@ -237,7 +237,7 @@ module.exports = ({ need, fail, arg, num }) => {
     eventInfo: { async fn(ctx, a) {
       const id = need(a, 1, '$eventInfo[id]')[0].trim();
       const event = await eventFor(ctx, id);
-      if (!event) return refuse(ctx, 'missing', `No event with id \`${id}\`. Run \`/event list\` to see the open ones.`);
+      if (!event) return refuse(ctx, 'missing', `No event with id \`${id}\`. Run \`/event action:list\` to see the open ones.`);
       await loadEvent(ctx, event);
       return 'ok';
     } },
@@ -249,7 +249,7 @@ module.exports = ({ need, fail, arg, num }) => {
       const event = await eventFor(ctx, id);
       if (!event) return refuse(ctx, 'missing', `No event with id \`${id}\`.`);
       if (!mayManageEvent(ctx, event)) return refuse(ctx, 'denied', 'Only the host or a staff member can end this event.');
-      if (event.status === 'scheduled') return refuse(ctx, 'not_started', 'That event has not started yet. Use `/event cancel` to call it off.');
+      if (event.status === 'scheduled') return refuse(ctx, 'not_started', 'That event has not started yet. Use `/event action:cancel` to call it off.');
       const ended = await events.finish(event.id);
       if (!ended) return refuse(ctx, 'over', 'That event is already over.');
       await loadEvent(ctx, ended);
@@ -422,7 +422,7 @@ module.exports = ({ need, fail, arg, num }) => {
       if (saved?.decided === 'yes' || legacy?.decided) return refuse(ctx, 'decided', 'That request has already been decided.');
 
       const rank = ranks.byRoleId(Number(roleId));
-      if (approving && !rank) return refuse(ctx, 'gone', 'That rank is no longer in the group. Run `/promote sync`.');
+      if (approving && !rank) return refuse(ctx, 'gone', 'That rank is no longer in the group. Run `/promote action:sync`.');
       let note = '';
       if (approving && rank) {
         const applied = await ranks.apply(stripId(discordId), rank);
@@ -904,7 +904,7 @@ module.exports = ({ need, fail, arg, num }) => {
    */
   async function applyGroupDecision(ctx, store, accepting, username) {
     if (username === '-') {
-      return 'No Roblox username could be read from the application, so the group was not changed. Use `/group accept` once you know it.';
+      return 'No Roblox username could be read from the application, so the group was not changed. Use `/group action:accept` once you know it.';
     }
     const group = mod('roblox/group');
     if (!group.isGroupConfigured()) return 'Group management is off, so only the card was updated.';
@@ -964,7 +964,7 @@ module.exports = ({ need, fail, arg, num }) => {
     const event = await events.getEvent(eventId);
     if (!event) return refuse(ctx, 'missing', 'There is no event with that id.');
     // Finishing something that never started would bank nothing and look like a bug.
-    if (event.status === 'scheduled') return refuse(ctx, 'not_started', `**${event.name}** has not started yet. Cancel it with \`/event cancel\` instead.`);
+    if (event.status === 'scheduled') return refuse(ctx, 'not_started', `**${event.name}** has not started yet. Cancel it with \`/event action:cancel\` instead.`);
     const result = await events.finish(eventId);
     if (!result) return refuse(ctx, 'over', `**${event.name}** is already over.`);
     const banked = (await events.listSignups(eventId)).filter((signup) => signup.shiftId !== null).length;

@@ -228,7 +228,7 @@ class ShiftManager {
   /**
    * Adds or removes banked time by hand. The correction is its own zero-length shift
    * rather than an edit to somebody's real ones, so what actually happened stays on
-   * the record and the change beside it is visible in `/shift history`.
+   * the record and the change beside it is visible in `/shift action:history`.
    */
   async adjust(input) {
     return this.locks.run(input.discordId, async () => {

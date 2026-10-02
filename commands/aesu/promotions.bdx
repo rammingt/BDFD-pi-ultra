@@ -1,7 +1,14 @@
-@name promote request
+@name promote
 @type slash
-@parent Request promotions and check things.
-@description Ask to be promoted.
+@description Request promotions and check things.
+@option action:string:What to do.:required:request=Request\: Ask to be promoted.|check=Check\: What the next rank up needs.|ranks=Ranks\: Every rank and what it asks for.|sync=Sync\: Sync with new updates
+@option user:user:Whose progress to check.
+$c[Runs the snippet for the action picked, like promote_request. Each one is below.]
+$include[promote_$message[action]]
+---
+@name promote_request
+@type snippet
+$c[/promote action:request. Ask to be promoted.]
 $ephemeral
 $var[r;$promoRequest]
 $if[$var[r]==promoted]
@@ -25,10 +32,9 @@ $else
 $json[error]
 $endif
 ---
-@name promote check
-@type slash
-@description What the next rank up needs.
-@option user:user:Whose progress to check.
+@name promote_check
+@type snippet
+$c[/promote action:check. What the next rank up needs.]
 $c[Public, so it can be shown to whoever is asking about it.]
 $var[r;$promoCheck[$message[user]]]
 $if[$var[r]!=ok]
@@ -37,13 +43,13 @@ $stop[$json[error]]
 $endif
 $include[promocard]
 ---
-@name promote ranks
-@type slash
-@description Every rank and what it asks for.
+@name promote_ranks
+@type snippet
+$c[/promote action:ranks. Every rank and what it asks for.]
 $ephemeral
 $promoRanks
 $if[$json[stored]==0]
-$stop[$if[$json[group]==yes;No ranks have been read from the group yet. Run `/promote sync`.;Promotions are off: set `ROBLOX_GROUP_ID` and `ROBLOX_GROUP_COOKIE`, then restart.]]
+$stop[$if[$json[group]==yes;No ranks have been read from the group yet. Run `/promote action:sync`.;Promotions are off: set `ROBLOX_GROUP_ID` and `ROBLOX_GROUP_COOKIE`, then restart.]]
 $endif
 $onlyIf[$json[count]>0;The group has no ranks between Guest and the owner, so there is nothing to promote into.]
 $addContainer[ranks]
@@ -53,9 +59,9 @@ $addSeparator
 $addTextDisplay[$if[$json[sheets]==yes;Edit these in the **Ranks** tab of the linked sheet.;Google Sheets is not configured, so nothing can be written against them yet.]]
 $closeContainer
 ---
-@name promote sync
-@type slash
-@description Sync with new updates
+@name promote_sync
+@type snippet
+$c[/promote action:sync. Sync with new updates]
 $ephemeral
 $onlyIf[$aesuAllowed[promotion]==yes;$if[$aesuRole[promotion]==;You do not have permission to do that.;Only $aesuRole[promotion] can do that.]]
 $var[r;$promoSync]
@@ -77,7 +83,7 @@ $c[The promotion check, from $promoCheck's JSON: one bar per requirement of the 
 $addContainer[promotion]
 $addSection[### $if[$json[atTop]==yes;Promotions;Promotion to $json[nextName]]
 Currently **$json[currentName]**$if[$json[squad]!=; · $json[squad]]$if[$json[robloxUsername]!=; · `$json[robloxUsername]`]
-$if[$json[atTop]==yes;This is error message too, but i dont know why so blame malleggc for this.;$if[$json[unconfigured]==yes;so this is error message, blame rammingt for this.;$if[$json[ready]==yes;Run `/promote request` to promote.;**$json[percent]%** of the way there.]]];$userAvatar[$json[discordId]]]
+$if[$json[atTop]==yes;This is error message too, but i dont know why so blame malleggc for this.;$if[$json[unconfigured]==yes;so this is error message, blame rammingt for this.;$if[$json[ready]==yes;Run `/promote action:request` to promote.;**$json[percent]%** of the way there.]]];$userAvatar[$json[discordId]]]
 $if[$json[requirementCount]>0]
 $addSeparator
 $addTextDisplay[$jsonList[requirements;{icon} **{label}**

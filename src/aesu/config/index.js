@@ -77,7 +77,7 @@ const config = {
     /** Where event posts go. Falls back to the prompt channel. */
     eventChannelId: str('EVENT_CHANNEL_ID', str('SHIFT_PROMPT_CHANNEL_ID')),
     /**
-     * Adds the privileged Server Members intent, which `/squad roster` needs to count
+     * Adds the privileged Server Members intent, which `/squad action:roster` needs to count
      * anybody. Turn it on in the developer portal FIRST: asking for an intent the app
      * has not been granted makes the login fail outright.
      */
@@ -244,7 +244,7 @@ function inspectConfig() {
   warn(
     'ROBLOX_COOKIE',
     !config.roblox.cookie,
-    'Not set - presence tracking is off, so shifts must be started and ended from /shift manage.',
+    'Not set - presence tracking is off, so shifts must be started and ended from /shift action:manage.',
   );
   warn(
     'ROBLOX_GROUP_COOKIE',

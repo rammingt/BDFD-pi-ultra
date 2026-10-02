@@ -29,7 +29,7 @@ function guideGrid() {
     [
       'What this is',
       'One row per rank in the Roblox group. Write what a rank needs and the bot checks it when somebody runs ' +
-        '/promote request, then promotes them in the group. Rover moves their Discord roles from there.',
+        '/promote action:request, then promotes them in the group. Rover moves their Discord roles from there.',
     ],
 
     [
@@ -40,9 +40,9 @@ function guideGrid() {
 
     ['Do not add columns', 'The whole tab is rewritten on every sync, so a column of your own is wiped. Use Notes.'],
 
-    ['When it syncs', `Every ${every}. Run /promote sync in Discord to do it immediately.`],
+    ['When it syncs', `Every ${every}. Run /promote action:sync in Discord to do it immediately.`],
 
-    ['A rank is missing', 'Run /promote sync. Ranks are read from the group itself, so the sheet follows whatever is there.'],
+    ['A rank is missing', 'Run /promote action:sync. Ranks are read from the group itself, so the sheet follows whatever is there.'],
 
     ['---', ''],
 
@@ -90,7 +90,7 @@ function guideGrid() {
 
     [
       'Promotion: auto',
-      'Anybody who meets the requirements is promoted the moment they run /promote request. These rows are green.',
+      'Anybody who meets the requirements is promoted the moment they run /promote action:request. These rows are green.',
     ],
 
     [
@@ -101,7 +101,7 @@ function guideGrid() {
 
     [
       'Promotion: manual',
-      'Not available through /promote at all. Staff move people with /group rank. This is the default for a new rank, ' +
+      'Not available through /promote at all. Staff move people with /group action:rank. This is the default for a new rank, ' +
         'so nobody can promote themselves into a rank before you have said they may.',
     ],
 

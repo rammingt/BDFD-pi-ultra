@@ -1,18 +1,24 @@
-@name shift manage
+@name shift
 @type slash
-@parent Manage and review shifts.
-@description Open the shift panel to start, pause or end a shift.
+@description Manage and review shifts.
+@option action:string:What to do.:required:manage=Manage\: Open the shift panel to start, pause or end a shift.|history=History\: List recent shifts.
+@option user:user:Whose shifts to list. Defaults to you.
+@option limit:integer:How many to show (1 to 25).
+$c[Runs the snippet for the action picked, like shift_manage. Each one is below.]
+$include[shift_$message[action]]
+---
+@name shift_manage
+@type snippet
+$c[/shift action:manage. Open the shift panel to start, pause or end a shift.]
 $c[The panel is the "shiftpanel" snippet below, shared by every button on it.]
 $ephemeral
 $shiftPanel
 $include[shiftpanel]
 $aesuJoinWarning
 ---
-@name shift history
-@type slash
-@description List recent shifts.
-@option user:user:Whose shifts to list. Defaults to you.
-@option limit:integer:How many to show (1 to 25).
+@name shift_history
+@type snippet
+$c[/shift action:history. List recent shifts.]
 $ephemeral
 $var[who;$if[$message[user]==;$authorID;$message[user]]]
 $shiftHistory[$var[who];$if[$message[limit]==;10;$message[limit]]]
@@ -164,7 +170,7 @@ $endif
 $ephemeral
 $onlyIf[$message[1]==$authorID;That prompt belongs to someone else.]
 $var[r;$shiftPromptAnswer[no]]
-Nothing was logged. Run `/shift manage` if you change your mind.
+Nothing was logged. Run `/shift action:manage` if you change your mind.
 ---
 @name aesu:prompt_start
 @type select
@@ -258,5 +264,5 @@ $closeContainer
 $c[DMed once somebody finishes /connect.]
 $addContainer[linked]
 $addTextDisplay[Your Roblox account **$json[displayName]** (`$json[username]`) is linked.
-I will ping you when I see you join one of the tracked games so you can log the session as a shift. You can also open the panel any time with `/shift manage`.]
+I will ping you when I see you join one of the tracked games so you can log the session as a shift. You can also open the panel any time with `/shift action:manage`.]
 $closeContainer
